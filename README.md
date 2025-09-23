@@ -2,7 +2,7 @@
 
 A beautifully simple self-hosted logging solution. No Kubernetes, no complexity, just logs.
 
-![CubicLog Dashboard](https://img.shields.io/badge/CubicLog-v1.0.0-blue) ![Go](https://img.shields.io/badge/Go-1.21+-blue) ![SQLite](https://img.shields.io/badge/SQLite-embedded-green)
+![CubicLog Dashboard](https://img.shields.io/badge/CubicLog-v1.1.0-blue) ![Go](https://img.shields.io/badge/Go-1.21+-blue) ![SQLite](https://img.shields.io/badge/SQLite-embedded-green)
 
 ## Features
 
@@ -71,105 +71,169 @@ Open [http://localhost:8080](http://localhost:8080) in your browser.
 
 That's it! 🎉
 
-## Usage
+## What's New in v1.1.0
 
-### Send a Log
+🎉 **True Flexible Logging** - Only title is required, everything else is intelligently derived
+🧠 **Smarter Analytics** - Enhanced pattern detection and automatic field population
+✨ **Backward Compatible** - All v1.0.0 logs continue to work exactly the same
 
-**⚠️ CubicLog v1.0 requires ALL header fields to be provided:**
+## Usage - Maximum Flexibility
 
-**Complete Log Entry:**
+### Send Any Log Structure
+
+**Minimal Log (only title required):**
 ```bash
 curl -X POST http://localhost:8080/api/logs \
   -H 'Content-Type: application/json' \
   -d '{
     "header": {
-      "type": "info",
-      "title": "User logged in",
-      "description": "Successful user authentication from web interface",
-      "source": "auth-service",
-      "color": "blue"
-    },
-    "body": {
-      "user_id": 123,
-      "ip": "192.168.1.1",
-      "user_agent": "Mozilla/5.0...",
-      "session_id": "abc123"
+      "title": "Something happened"
     }
   }'
+# CubicLog will intelligently derive: type, color, source
 ```
 
-**Error Log Example:**
+**Partially Structured Log:**
+```bash
+curl -X POST http://localhost:8080/api/logs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "header": {
+      "title": "Payment processed",
+      "type": "payment"
+    },
+    "body": {
+      "service": "stripe-gateway",
+      "amount": 99.99
+    }
+  }'
+# CubicLog auto-assigns: color (green for success), source (from body.service)
+```
+
+**Freestyle Body (let CubicLog figure it out):**
+```bash
+curl -X POST http://localhost:8080/api/logs \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "header": {
+      "title": "Something went wrong"
+    },
+    "body": {
+      "whatever": "you",
+      "want": "to",
+      "send": {
+        "nested": "is fine",
+        "service": "hidden-service-name"
+      },
+      "error": "Database timeout after 30s"
+    }
+  }'
+# CubicLog extracts: type=error, color=red, source=hidden-service-name
+```
+
+**Fully Specified (if you prefer control):**
 ```bash
 curl -X POST http://localhost:8080/api/logs \
   -H 'Content-Type: application/json' \
   -d '{
     "header": {
       "type": "error",
-      "title": "Payment Processing Failed",
-      "description": "Credit card transaction was declined by payment gateway",
-      "source": "payment-service",
+      "title": "Database connection failed",
+      "description": "Connection timeout after 30s",
+      "source": "api-server",
       "color": "red"
     },
     "body": {
-      "user_id": 123,
-      "amount": 99.99,
-      "error_code": "CARD_DECLINED",
-      "transaction_id": "txn_abc123",
-      "gateway_response": "Insufficient funds"
+      "error_code": "CONN_TIMEOUT",
+      "retry_count": 3
     }
   }'
 ```
 
-### Required Header Fields
+### Intelligent Defaults in Action
 
-**All fields are mandatory in v1.0:**
+CubicLog v1.1.0 automatically:
+- **Detects severity** from any text in title, description, or body
+- **Assigns appropriate colors** based on detected severity
+- **Extracts source** from body.service, body.source, body.app, or nested structures
+- **Categorizes logs** using smart pattern matching
+- **Requires only a title** - everything else is optional
 
-| Field | Type | Description | Example |
-|-------|------|-------------|---------|
-| `type` | string | Log category/type | `"error"`, `"info"`, `"warning"` |
-| `title` | string | Brief, descriptive title | `"Payment Failed"` |
-| `description` | string | Detailed explanation | `"Credit card was declined by gateway"` |
-| `source` | string | Originating service/component | `"payment-service"`, `"auth-api"` |
-| `color` | string | Valid Tailwind CSS 4 color | `"red"`, `"blue"`, `"green"` |
+### Header Fields
 
-### Color Options
+| Field | Required | Description | Auto-Derived |
+|-------|----------|-------------|--------------|
+| `title` | ✅ Yes | Brief description of the event | Never |
+| `type` | ❌ No | Log category | Yes, from content analysis |
+| `description` | ❌ No | Detailed explanation | No |
+| `source` | ❌ No | Origin service/component | Yes, from body fields |
+| `color` | ❌ No | Tailwind CSS color | Yes, based on severity |
 
-CubicLog supports all Tailwind CSS v4 named colors for visual organization:
+### Philosophy: 'Adaptable by Design, Intelligent by Nature'
 
-**Primary Colors:**
-- <span style="color: #ef4444">**red**</span> - Errors, failures, critical issues
-- <span style="color: #22c55e">**green**</span> - Success, completed operations  
-- <span style="color: #eab308">**yellow**</span> - Warnings, alerts
-- <span style="color: #3b82f6">**blue**</span> - Info, general logs
-- <span style="color: #a855f7">**purple**</span> - Custom events
-- <span style="color: #6b7280">**gray**</span> - Debug, trace logs
+Send logs however makes sense for your application:
+- Structured or unstructured ✅
+- With or without metadata ✅
+- Any JSON structure in the body ✅
+- Missing fields are intelligently derived ✅
+- Only title is mandatory ✅
 
-**Extended Palette:**
-- <span style="color: #f97316">**orange**</span> - Performance issues, slow operations
-- <span style="color: #ec4899">**pink**</span> - User interactions, UI events
-- <span style="color: #6366f1">**indigo**</span> - Database operations
-- <span style="color: #06b6d4">**cyan**</span> - Network requests, API calls
-- <span style="color: #64748b">**slate**</span> - System logs, background tasks
-- <span style="color: #71717a">**zinc**</span> - Cache operations
-- <span style="color: #737373">**neutral**</span> - Default/unclassified logs
-- <span style="color: #78716c">**stone**</span> - File operations
+CubicLog figures out the rest using intelligent pattern matching and content analysis.
 
-**Bright Colors:**
-- <span style="color: #65a30d">**lime**</span> - High priority success
-- <span style="color: #059669">**emerald**</span> - Completion events
-- <span style="color: #0d9488">**teal**</span> - Data processing
-- <span style="color: #0ea5e9">**sky**</span> - Cloud/external services
-- <span style="color: #8b5cf6">**violet**</span> - Authentication events
-- <span style="color: #d946ef">**fuchsia**</span> - Special notifications
-- <span style="color: #f43f5e">**rose**</span> - Security alerts
+## Migration from v1.0.0 to v1.1.0
 
-**⚠️ Color Required**: In v1.0, the `color` field is mandatory and must be one of the 22 valid Tailwind CSS 4 color names listed above. Auto-assignment has been removed to ensure consistent, intentional color usage.
+**Breaking Changes:** None! v1.1.0 is fully backwards compatible.
+
+**New Capabilities:**
+- Only 'title' field is now required (was all 5 fields)
+- Intelligent field derivation for missing values
+- Auto-color assignment based on severity detection
+- Source extraction from body fields (including nested)
+- Type detection from content analysis
+- Smarter pattern matching for better categorization
+
+**For v1.0.0 users:**
+- All your existing logs continue to work exactly the same
+- Your existing API integrations need no changes
+- You can now simplify your logging code if desired
+- The dashboard shows the same information, but with smarter insights
+
+## Examples - From Simple to Complex
+
+### Dead Simple
+```json
+{"header": {"title": "User login"}}
+```
+
+### Let CubicLog Think
+```json
+{
+  "header": {"title": "Failed to process payment"},
+  "body": {"service": "stripe", "amount": 99.99}
+}
+```
+
+### You're in Control
+```json
+{
+  "header": {
+    "type": "custom-type",
+    "title": "Specific event",
+    "description": "Detailed description",
+    "source": "my-service",
+    "color": "purple"
+  },
+  "body": {"anything": "you want"}
+}
+```
+
+All three work perfectly in v1.1.0!
 
 ## 🧠 Intelligent Analytics
 
-CubicLog v1.0 introduces powerful intelligent analytics that automatically derive insights from your logs without requiring structured schemas or complex configuration.
+CubicLog v1.1.0 features enhanced intelligent analytics that automatically derive insights from your logs without requiring structured schemas or complex configuration.
 
-### Philosophy: "Be Liberal in What You Accept, Intelligent in What You Derive"
+### Philosophy: "Adaptable by Design, Intelligent by Nature"
 
 CubicLog allows you to send **any JSON structure** in the log body while automatically extracting meaningful insights through pattern recognition and intelligent analysis.
 

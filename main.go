@@ -1,6 +1,6 @@
-// CubicLog v1.0.0 - A beautifully simple self-hosted logging solution by Mendex
+// CubicLog v1.1.0 - A beautifully simple self-hosted logging solution by Mendex
 //
-// PHILOSOPHY: "Be liberal in what you accept, intelligent in what you derive"
+// PHILOSOPHY: "Adaptable by design, intelligent by nature"
 // Single binary, SQLite database, zero dependencies. If it needs Kubernetes, we've failed.
 //
 // CORE FEATURES:
@@ -55,13 +55,13 @@ type Log struct {
 	Timestamp time.Time              `json:"timestamp"` // Auto-generated creation time
 }
 
-// LogHeader contains structured metadata - all fields are mandatory for v1.0
+// LogHeader contains structured metadata - only title is required for v1.1+
 type LogHeader struct {
-	Type        string `json:"type"`        // Log category (error, info, warning, etc.)
-	Title       string `json:"title"`       // Brief, descriptive title
-	Description string `json:"description"` // Detailed explanation
-	Source      string `json:"source"`      // Originating service/component
-	Color       string `json:"color"`       // Tailwind CSS 4 color for visual categorization
+	Type        string `json:"type,omitempty"`        // Optional - will be derived if missing
+	Title       string `json:"title"`                 // Only required field
+	Description string `json:"description,omitempty"` // Optional
+	Source      string `json:"source,omitempty"`      // Optional - will be derived
+	Color       string `json:"color,omitempty"`       // Optional - will be auto-assigned
 }
 
 // LogMetadata contains intelligently derived metadata from log analysis
@@ -91,7 +91,7 @@ type SourceCount struct {
 var db *sql.DB
 
 // Version information
-const VERSION = "1.0.0"
+const VERSION = "1.1.0"
 
 // Default PID file location
 const DEFAULT_PID_FILE = "./cubiclog.pid"
@@ -243,9 +243,9 @@ func createTable() error {
 	CREATE TABLE IF NOT EXISTS logs (
 		id          INTEGER PRIMARY KEY AUTOINCREMENT,
 		type        TEXT NOT NULL,                        -- Log category
-		title       TEXT NOT NULL,                        -- Brief title
-		description TEXT NOT NULL,                        -- Detailed description  
-		source      TEXT NOT NULL,                        -- Source service/component
+		title       TEXT NOT NULL,                        -- Brief title (only required field in v1.1+)
+		description TEXT,                                 -- Detailed description (optional in v1.1+)
+		source      TEXT,                                 -- Source service/component (optional in v1.1+)
 		color       TEXT NOT NULL,                        -- Tailwind CSS 4 color
 		body        TEXT,                                 -- JSON body (optional)
 		timestamp   DATETIME DEFAULT CURRENT_TIMESTAMP    -- Auto-generated timestamp
@@ -344,7 +344,7 @@ func isValidTailwindColor(color string) bool {
 
 // deriveMetadata intelligently analyzes incoming logs to derive useful metadata
 // 
-// PHILOSOPHY: "Be liberal in what you accept, intelligent in what you derive"
+// PHILOSOPHY: "Adaptable by design, intelligent by nature"
 // This function automatically extracts meaningful insights from unstructured log data
 // without forcing users to conform to specific schemas or formats.
 //
@@ -360,6 +360,91 @@ func isValidTailwindColor(color string) bool {
 // - Debug keywords: "debug", "trace", "verbose", "entering", "exiting"
 // - Default fallback: "info" for unmatched patterns
 //
+// =============================================================================
+// INTELLIGENT FIELD DERIVATION - v1.1.0 FLEXIBILITY FUNCTIONS
+// =============================================================================
+
+// deriveTypeFromContent intelligently determines log type from content analysis
+func deriveTypeFromContent(header LogHeader, body map[string]interface{}) string {
+	// Check body for common type indicators
+	if typeField, ok := body["type"].(string); ok && typeField != "" {
+		return typeField
+	}
+	if levelField, ok := body["level"].(string); ok && levelField != "" {
+		return levelField
+	}
+	
+	// Analyze content to guess type
+	allText := strings.ToLower(header.Title + " " + header.Description)
+	if bodyJSON, err := json.Marshal(body); err == nil {
+		allText += " " + strings.ToLower(string(bodyJSON))
+	}
+	
+	// Smart type detection using keywords
+	if strings.Contains(allText, "error") || strings.Contains(allText, "fail") || 
+	   strings.Contains(allText, "exception") || strings.Contains(allText, "crash") {
+		return "error"
+	}
+	if strings.Contains(allText, "warn") || strings.Contains(allText, "timeout") ||
+	   strings.Contains(allText, "slow") || strings.Contains(allText, "retry") {
+		return "warning"
+	}
+	if strings.Contains(allText, "success") || strings.Contains(allText, "complete") ||
+	   strings.Contains(allText, "finish") || strings.Contains(allText, "approved") {
+		return "success"
+	}
+	if strings.Contains(allText, "debug") || strings.Contains(allText, "trace") ||
+	   strings.Contains(allText, "verbose") {
+		return "debug"
+	}
+	
+	return "info" // sensible default
+}
+
+// deriveSourceFromBody extracts source information from body fields
+func deriveSourceFromBody(body map[string]interface{}) string {
+	// Try common source field names
+	sourceFields := []string{"source", "service", "component", "app", "application", "module", "system"}
+	for _, field := range sourceFields {
+		if value, ok := body[field].(string); ok && value != "" {
+			return value
+		}
+	}
+	
+	// Check nested common patterns
+	if meta, ok := body["metadata"].(map[string]interface{}); ok {
+		for _, field := range sourceFields {
+			if value, ok := meta[field].(string); ok && value != "" {
+				return value
+			}
+		}
+	}
+	
+	return "unknown" // clear default when no source found
+}
+
+// deriveColorFromSeverity assigns appropriate colors based on severity analysis
+func deriveColorFromSeverity(header LogHeader, body map[string]interface{}) string {
+	// Use existing deriveMetadata logic to determine severity
+	metadata := deriveMetadata(header, body)
+	
+	// Map severity to appropriate color
+	switch metadata.DerivedSeverity {
+	case "error":
+		return "red"
+	case "warning":
+		return "yellow"
+	case "success":
+		return "green"
+	case "debug":
+		return "gray"
+	case "info":
+		return "blue"
+	default:
+		return "blue"
+	}
+}
+
 // Returns LogMetadata with derived insights that power the analytics dashboard
 func deriveMetadata(header LogHeader, body map[string]interface{}) LogMetadata {
 	metadata := LogMetadata{}
@@ -453,26 +538,18 @@ func containsString(slice []string, item string) bool {
 	return false
 }
 
-// validateLogHeader performs comprehensive validation of log header fields
-func validateLogHeader(header LogHeader) error {
-	if header.Type == "" {
-		return fmt.Errorf("type is required")
-	}
+// validateLogHeader performs minimal validation - only title is required for v1.1+
+func validateLogHeader(header *LogHeader) error {
+	// Only title is truly required
 	if header.Title == "" {
 		return fmt.Errorf("title is required")
 	}
-	if header.Description == "" {
-		return fmt.Errorf("description is required")
-	}
-	if header.Source == "" {
-		return fmt.Errorf("source is required")
-	}
-	if header.Color == "" {
-		return fmt.Errorf("color is required")
-	}
-	if !isValidTailwindColor(header.Color) {
+	
+	// If color provided, validate it
+	if header.Color != "" && !isValidTailwindColor(header.Color) {
 		return fmt.Errorf("invalid color '%s' - must be a valid Tailwind CSS 4 color name", header.Color)
 	}
+	
 	return nil
 }
 
@@ -515,9 +592,28 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Validate all header fields
-	if err := validateLogHeader(entry.Header); err != nil {
+	if err := validateLogHeader(&entry.Header); err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
+	}
+
+	// =============================================================================
+	// INTELLIGENT DEFAULTS SECTION - v1.1.0 FLEXIBILITY
+	// =============================================================================
+	
+	// Auto-derive type if missing
+	if entry.Header.Type == "" {
+		entry.Header.Type = deriveTypeFromContent(entry.Header, entry.Body)
+	}
+	
+	// Auto-derive source if missing  
+	if entry.Header.Source == "" {
+		entry.Header.Source = deriveSourceFromBody(entry.Body)
+	}
+	
+	// Auto-assign color based on detected severity if missing
+	if entry.Header.Color == "" {
+		entry.Header.Color = deriveColorFromSeverity(entry.Header, entry.Body)
 	}
 
 	// Serialize body to JSON for storage
@@ -530,13 +626,19 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	// Derive intelligent metadata from the log content
 	metadata := deriveMetadata(entry.Header, entry.Body)
 
-	// Insert into database with derived metadata
+	// Insert into database with derived metadata (handling nullable fields for v1.1+)
 	result, err := db.Exec(`
 		INSERT INTO logs (type, title, description, source, color, body, derived_severity, derived_source, derived_category) 
-		VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-		entry.Header.Type, entry.Header.Title, entry.Header.Description,
-		entry.Header.Source, entry.Header.Color, string(bodyJSON),
-		metadata.DerivedSeverity, metadata.DerivedSource, metadata.DerivedCategory)
+		VALUES (?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?)`,
+		entry.Header.Type, 
+		entry.Header.Title, 
+		entry.Header.Description, // Will be NULL if empty
+		entry.Header.Source,       // Will be NULL if empty
+		entry.Header.Color, 
+		string(bodyJSON),
+		metadata.DerivedSeverity, 
+		metadata.DerivedSource, 
+		metadata.DerivedCategory)
 
 	if err != nil {
 		log.Printf("Database insert error: %v", err)
@@ -684,7 +786,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // - Peak hour identification and spike detection
 //
 // ANALYTICS PHILOSOPHY:
-// This endpoint embodies CubicLog's "intelligent in what you derive" philosophy by
+// This endpoint embodies CubicLog's "intelligent by nature" philosophy by
 // automatically generating actionable insights from unstructured log data without
 // requiring users to pre-configure dashboards or define complex queries.
 //

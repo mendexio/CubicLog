@@ -1,4 +1,4 @@
-// CubicLog Test Suite v1.0.0 - Comprehensive testing for core functionality and intelligent analytics
+// CubicLog Test Suite v1.1.0 - Comprehensive testing for core functionality and intelligent analytics
 //
 // TESTING PHILOSOPHY:
 // Comprehensive test coverage for all CubicLog functionality using in-memory SQLite 
@@ -144,24 +144,13 @@ func TestCreateLogValidationErrors(t *testing.T) {
 	defer cleanup()
 
 	testCases := []struct {
-		name     string
-		logData  Log
-		expected string
+		name       string
+		logData    Log
+		expected   string
+		shouldFail bool
 	}{
 		{
-			name: "missing type",
-			logData: Log{
-				Header: LogHeader{
-					Title:       "Test",
-					Description: "Test desc",
-					Source:      "test",
-					Color:       "blue",
-				},
-			},
-			expected: "type is required",
-		},
-		{
-			name: "missing title",
+			name: "missing title (only real validation error in v1.1+)",
 			logData: Log{
 				Header: LogHeader{
 					Type:        "info",
@@ -170,43 +159,8 @@ func TestCreateLogValidationErrors(t *testing.T) {
 					Color:       "blue",
 				},
 			},
-			expected: "title is required",
-		},
-		{
-			name: "missing description",
-			logData: Log{
-				Header: LogHeader{
-					Type:   "info",
-					Title:  "Test",
-					Source: "test",
-					Color:  "blue",
-				},
-			},
-			expected: "description is required",
-		},
-		{
-			name: "missing source",
-			logData: Log{
-				Header: LogHeader{
-					Type:        "info",
-					Title:       "Test",
-					Description: "Test desc",
-					Color:       "blue",
-				},
-			},
-			expected: "source is required",
-		},
-		{
-			name: "missing color",
-			logData: Log{
-				Header: LogHeader{
-					Type:        "info",
-					Title:       "Test",
-					Description: "Test desc",
-					Source:      "test",
-				},
-			},
-			expected: "color is required",
+			expected:   "title is required",
+			shouldFail: true,
 		},
 		{
 			name: "invalid color",
@@ -219,7 +173,60 @@ func TestCreateLogValidationErrors(t *testing.T) {
 					Color:       "invalid-color",
 				},
 			},
-			expected: "invalid color 'invalid-color'",
+			expected:   "invalid color 'invalid-color'",
+			shouldFail: true,
+		},
+		{
+			name: "missing type (should auto-derive in v1.1+)",
+			logData: Log{
+				Header: LogHeader{
+					Title:       "Test",
+					Description: "Test desc",
+					Source:      "test",
+					Color:       "blue",
+				},
+			},
+			expected:   "",
+			shouldFail: false,
+		},
+		{
+			name: "missing description (should work in v1.1+)",
+			logData: Log{
+				Header: LogHeader{
+					Type:   "info",
+					Title:  "Test",
+					Source: "test",
+					Color:  "blue",
+				},
+			},
+			expected:   "",
+			shouldFail: false,
+		},
+		{
+			name: "missing source (should auto-derive in v1.1+)",
+			logData: Log{
+				Header: LogHeader{
+					Type:        "info",
+					Title:       "Test",
+					Description: "Test desc",
+					Color:       "blue",
+				},
+			},
+			expected:   "",
+			shouldFail: false,
+		},
+		{
+			name: "missing color (should auto-assign in v1.1+)",
+			logData: Log{
+				Header: LogHeader{
+					Type:        "info",
+					Title:       "Test",
+					Description: "Test desc",
+					Source:      "test",
+				},
+			},
+			expected:   "",
+			shouldFail: false,
 		},
 	}
 
@@ -232,13 +239,18 @@ func TestCreateLogValidationErrors(t *testing.T) {
 
 			createLog(w, req)
 
-			if w.Code != http.StatusBadRequest {
-				t.Errorf("Expected status 400, got %d", w.Code)
-			}
-
-			body := w.Body.String()
-			if !contains(body, tc.expected) {
-				t.Errorf("Expected error message to contain '%s', got '%s'", tc.expected, body)
+			if tc.shouldFail {
+				if w.Code != http.StatusBadRequest {
+					t.Errorf("Expected status 400, got %d", w.Code)
+				}
+				body := w.Body.String()
+				if !contains(body, tc.expected) {
+					t.Errorf("Expected error message to contain '%s', got '%s'", tc.expected, body)
+				}
+			} else {
+				if w.Code != http.StatusCreated {
+					t.Errorf("Expected status 201 (intelligent defaults), got %d: %s", w.Code, w.Body.String())
+				}
 			}
 		})
 	}
@@ -370,7 +382,7 @@ func TestLogHeaderValidation(t *testing.T) {
 		Color:       "blue",
 	}
 
-	if err := validateLogHeader(validHeader); err != nil {
+	if err := validateLogHeader(&validHeader); err != nil {
 		t.Errorf("Expected valid header to pass validation, got error: %v", err)
 	}
 
@@ -383,7 +395,7 @@ func TestLogHeaderValidation(t *testing.T) {
 		Color:       "invalid-color",
 	}
 
-	if err := validateLogHeader(invalidHeader); err == nil {
+	if err := validateLogHeader(&invalidHeader); err == nil {
 		t.Error("Expected invalid header to fail validation")
 	}
 }
@@ -749,6 +761,154 @@ func determineSeverityFromText(text string) string {
 	}
 	
 	return "info"
+}
+
+// =============================================================================
+// v1.1.0 FLEXIBLE VALIDATION TESTS
+// =============================================================================
+
+// TestFlexibleLogCreation tests the new v1.1.0 flexible logging capabilities
+func TestFlexibleLogCreation(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	
+	testCases := []struct {
+		name        string
+		logData     Log
+		shouldPass  bool
+		description string
+	}{
+		{
+			name: "minimal log with only title",
+			logData: Log{
+				Header: LogHeader{
+					Title: "Test minimal log",
+				},
+			},
+			shouldPass:  true,
+			description: "Should accept log with only title",
+		},
+		{
+			name: "log without color gets auto-assigned",
+			logData: Log{
+				Header: LogHeader{
+					Title: "Error occurred",
+					Type:  "error",
+				},
+			},
+			shouldPass:  true,
+			description: "Should auto-assign red color for error type",
+		},
+		{
+			name: "log derives type from content",
+			logData: Log{
+				Header: LogHeader{
+					Title: "Operation failed with exception",
+				},
+				Body: map[string]interface{}{
+					"error": "NullPointerException",
+				},
+			},
+			shouldPass:  true,
+			description: "Should derive error type from content",
+		},
+		{
+			name: "log extracts source from body",
+			logData: Log{
+				Header: LogHeader{
+					Title: "User logged in",
+				},
+				Body: map[string]interface{}{
+					"service": "auth-api",
+					"user_id": 123,
+				},
+			},
+			shouldPass:  true,
+			description: "Should extract source from body.service",
+		},
+		{
+			name: "empty log fails",
+			logData: Log{
+				Header: LogHeader{},
+			},
+			shouldPass:  false,
+			description: "Should reject log without title",
+		},
+	}
+	
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			jsonData, _ := json.Marshal(tc.logData)
+			req := httptest.NewRequest("POST", "/api/logs", bytes.NewBuffer(jsonData))
+			req.Header.Set("Content-Type", "application/json")
+			w := httptest.NewRecorder()
+			
+			createLog(w, req)
+			
+			if tc.shouldPass {
+				if w.Code != http.StatusCreated {
+					t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
+				}
+				
+				// Verify intelligent defaults were applied
+				var response Log
+				json.Unmarshal(w.Body.Bytes(), &response)
+				
+				// Check auto-assigned fields
+				if response.Header.Color == "" {
+					t.Error("Expected color to be auto-assigned")
+				}
+				if response.Header.Type == "" {
+					t.Error("Expected type to be derived")
+				}
+			} else {
+				if w.Code == http.StatusCreated {
+					t.Errorf("Expected failure but got success")
+				}
+			}
+		})
+	}
+}
+
+// TestIntelligentDefaults tests the new intelligent defaults system
+func TestIntelligentDefaults(t *testing.T) {
+	cleanup := setupTestDB(t)
+	defer cleanup()
+	
+	// Test error detection and color assignment
+	errorLog := Log{
+		Header: LogHeader{
+			Title: "Database connection failed",
+		},
+		Body: map[string]interface{}{
+			"error_code": "CONN_TIMEOUT",
+		},
+	}
+	
+	jsonData, _ := json.Marshal(errorLog)
+	req := httptest.NewRequest("POST", "/api/logs", bytes.NewBuffer(jsonData))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	
+	createLog(w, req)
+	
+	if w.Code != http.StatusCreated {
+		t.Fatalf("Failed to create log: %d", w.Code)
+	}
+	
+	var response Log
+	json.Unmarshal(w.Body.Bytes(), &response)
+	
+	// Verify intelligent defaults
+	if response.Header.Type != "error" {
+		t.Errorf("Expected type 'error', got '%s'", response.Header.Type)
+	}
+	if response.Header.Color != "red" {
+		t.Errorf("Expected color 'red', got '%s'", response.Header.Color)
+	}
+	if response.Header.Source != "unknown" {
+		t.Errorf("Expected source 'unknown', got '%s'", response.Header.Source)
+	}
 }
 
 // =============================================================================

@@ -53,3 +53,6 @@ bin/
 
 # Air (hot reload) tmp files
 tmp/
+
+# Runtime files
+*.pid

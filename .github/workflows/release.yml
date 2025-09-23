@@ -29,32 +29,34 @@ jobs:
       - name: Build for all platforms
         run: |
           mkdir -p builds
+          VERSION=${GITHUB_REF_NAME#v} # Remove 'v' prefix from tag
           
           # Linux builds
-          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-linux-amd64
-          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o builds/cubiclog-linux-arm64
+          GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-${VERSION}-linux-amd64
+          GOOS=linux GOARCH=arm64 go build -ldflags="-s -w" -o builds/cubiclog-${VERSION}-linux-arm64
           
           # Windows builds  
-          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-windows-amd64.exe
+          GOOS=windows GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-${VERSION}-windows-amd64.exe
           
           # macOS builds
-          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-macos-amd64
-          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o builds/cubiclog-macos-arm64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="-s -w" -o builds/cubiclog-${VERSION}-macos-amd64
+          GOOS=darwin GOARCH=arm64 go build -ldflags="-s -w" -o builds/cubiclog-${VERSION}-macos-arm64
 
       - name: Compress release files
         run: |
           cd builds
+          VERSION=${GITHUB_REF_NAME#v} # Remove 'v' prefix from tag
           
           # Windows ZIP
-          zip cubiclog-windows-amd64.zip cubiclog-windows-amd64.exe
+          zip cubiclog-${VERSION}-windows-amd64.zip cubiclog-${VERSION}-windows-amd64.exe
           
           # Linux TAR.GZ
-          tar -czvf cubiclog-linux-amd64.tar.gz cubiclog-linux-amd64
-          tar -czvf cubiclog-linux-arm64.tar.gz cubiclog-linux-arm64
+          tar -czvf cubiclog-${VERSION}-linux-amd64.tar.gz cubiclog-${VERSION}-linux-amd64
+          tar -czvf cubiclog-${VERSION}-linux-arm64.tar.gz cubiclog-${VERSION}-linux-arm64
           
           # macOS TAR.GZ
-          tar -czvf cubiclog-macos-amd64.tar.gz cubiclog-macos-amd64
-          tar -czvf cubiclog-macos-arm64.tar.gz cubiclog-macos-arm64
+          tar -czvf cubiclog-${VERSION}-macos-amd64.tar.gz cubiclog-${VERSION}-macos-amd64
+          tar -czvf cubiclog-${VERSION}-macos-arm64.tar.gz cubiclog-${VERSION}-macos-arm64
           
           # List files for verification
           ls -la
@@ -138,6 +140,9 @@ jobs:
   deploy-docs:
     runs-on: ubuntu-latest
     needs: build-and-release
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     permissions:
       contents: read
       pages: write
