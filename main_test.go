@@ -1,9 +1,9 @@
-// CubicLog Test Suite v1.1.0 - Comprehensive testing for core functionality and intelligent analytics
+// CubicLog Test Suite v1.1.0 - Comprehensive testing for core functionality and smart analytics
 //
 // TESTING PHILOSOPHY:
-// Comprehensive test coverage for all CubicLog functionality using in-memory SQLite 
+// Comprehensive test coverage for all CubicLog functionality using in-memory SQLite
 // databases for complete isolation and maximum speed. Tests verify both core logging
-// functionality and advanced intelligent analytics features.
+// functionality and advanced smart analytics features.
 //
 // CORE FUNCTIONALITY TESTS:
 // - Health check endpoint validation
@@ -13,8 +13,8 @@
 // - Error handling and edge cases
 // - CORS headers and security measures
 //
-// INTELLIGENT ANALYTICS TESTS:
-// - Metadata derivation from unstructured log content
+// SMART ANALYTICS TESTS:
+// - Metadata extraction from unstructured log content
 // - Severity detection using pattern matching algorithms
 // - Source extraction from multiple data fields
 // - Enhanced statistics endpoint with real-time analytics
@@ -54,11 +54,11 @@ func setupTestDB(t *testing.T) func() {
 	if err != nil {
 		t.Fatalf("Failed to create test database: %v", err)
 	}
-	
+
 	if err := createTable(); err != nil {
 		t.Fatalf("Failed to create test table: %v", err)
 	}
-	
+
 	// Return cleanup function
 	return func() {
 		db.Close()
@@ -249,7 +249,7 @@ func TestCreateLogValidationErrors(t *testing.T) {
 				}
 			} else {
 				if w.Code != http.StatusCreated {
-					t.Errorf("Expected status 201 (intelligent defaults), got %d: %s", w.Code, w.Body.String())
+					t.Errorf("Expected status 201 (smart field extraction), got %d: %s", w.Code, w.Body.String())
 				}
 			}
 		})
@@ -445,10 +445,10 @@ func TestInvalidJSONHandling(t *testing.T) {
 }
 
 // =============================================================================
-// INTELLIGENCE FEATURE TESTS
+// SMART FEATURE TESTS
 // =============================================================================
 
-// TestDeriveMetadata tests the intelligent metadata derivation function
+// TestDeriveMetadata tests the smart metadata extraction function
 func TestDeriveMetadata(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -559,7 +559,7 @@ func TestDeriveMetadata(t *testing.T) {
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			result := deriveMetadata(tc.header, tc.body)
-			
+
 			if result.DerivedSeverity != tc.expected.DerivedSeverity {
 				t.Errorf("Expected severity '%s', got '%s'", tc.expected.DerivedSeverity, result.DerivedSeverity)
 			}
@@ -573,8 +573,8 @@ func TestDeriveMetadata(t *testing.T) {
 	}
 }
 
-// TestIntelligentStatsEndpoint tests the enhanced stats endpoint with analytics
-func TestIntelligentStatsEndpoint(t *testing.T) {
+// TestSmartStatsEndpoint tests the enhanced stats endpoint with analytics
+func TestSmartStatsEndpoint(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
 
@@ -628,7 +628,7 @@ func TestIntelligentStatsEndpoint(t *testing.T) {
 		req.Header.Set("Content-Type", "application/json")
 		w := httptest.NewRecorder()
 		createLog(w, req)
-		
+
 		if w.Code != http.StatusCreated {
 			t.Fatalf("Failed to create test log: %d", w.Code)
 		}
@@ -668,7 +668,7 @@ func TestIntelligentStatsEndpoint(t *testing.T) {
 		t.Error("Expected severity_breakdown in stats response")
 	}
 
-	// Verify top sources (derived from body.service)
+	// Verify top sources (automatically extracted from body.service)
 	if topSources, ok := stats["top_sources"].([]interface{}); ok {
 		if len(topSources) == 0 {
 			t.Error("Expected top_sources to have entries")
@@ -701,8 +701,8 @@ func TestIntelligentStatsEndpoint(t *testing.T) {
 // TestSeverityDetection tests various severity detection patterns
 func TestSeverityDetection(t *testing.T) {
 	testCases := []struct {
-		name           string
-		textInput      string
+		name             string
+		textInput        string
 		expectedSeverity string
 	}{
 		{"error keywords", "database connection failed with timeout error", "error"},
@@ -727,7 +727,7 @@ func TestSeverityDetection(t *testing.T) {
 // Helper function to test severity detection logic
 func determineSeverityFromText(text string) string {
 	textLower := strings.ToLower(text)
-	
+
 	// Error indicators (highest priority)
 	errorKeywords := []string{"error", "failed", "failure", "exception", "crash", "fatal", "critical"}
 	for _, keyword := range errorKeywords {
@@ -735,7 +735,7 @@ func determineSeverityFromText(text string) string {
 			return "error"
 		}
 	}
-	
+
 	// Warning indicators
 	warningKeywords := []string{"warning", "warn", "slow", "timeout", "deprecated", "retry"}
 	for _, keyword := range warningKeywords {
@@ -743,7 +743,7 @@ func determineSeverityFromText(text string) string {
 			return "warning"
 		}
 	}
-	
+
 	// Success indicators
 	successKeywords := []string{"success", "completed", "finished", "processed", "approved", "validated"}
 	for _, keyword := range successKeywords {
@@ -751,7 +751,7 @@ func determineSeverityFromText(text string) string {
 			return "success"
 		}
 	}
-	
+
 	// Debug indicators
 	debugKeywords := []string{"debug", "trace", "verbose", "entering", "exiting"}
 	for _, keyword := range debugKeywords {
@@ -759,7 +759,7 @@ func determineSeverityFromText(text string) string {
 			return "debug"
 		}
 	}
-	
+
 	return "info"
 }
 
@@ -771,7 +771,7 @@ func determineSeverityFromText(text string) string {
 func TestFlexibleLogCreation(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	
+
 	testCases := []struct {
 		name        string
 		logData     Log
@@ -835,31 +835,31 @@ func TestFlexibleLogCreation(t *testing.T) {
 			description: "Should reject log without title",
 		},
 	}
-	
+
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
 			jsonData, _ := json.Marshal(tc.logData)
 			req := httptest.NewRequest("POST", "/api/logs", bytes.NewBuffer(jsonData))
 			req.Header.Set("Content-Type", "application/json")
 			w := httptest.NewRecorder()
-			
+
 			createLog(w, req)
-			
+
 			if tc.shouldPass {
 				if w.Code != http.StatusCreated {
 					t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
 				}
-				
-				// Verify intelligent defaults were applied
+
+				// Verify smart defaults were applied
 				var response Log
 				json.Unmarshal(w.Body.Bytes(), &response)
-				
+
 				// Check auto-assigned fields
 				if response.Header.Color == "" {
 					t.Error("Expected color to be auto-assigned")
 				}
 				if response.Header.Type == "" {
-					t.Error("Expected type to be derived")
+					t.Error("Expected type to be automatically extracted")
 				}
 			} else {
 				if w.Code == http.StatusCreated {
@@ -870,11 +870,11 @@ func TestFlexibleLogCreation(t *testing.T) {
 	}
 }
 
-// TestIntelligentDefaults tests the new intelligent defaults system
-func TestIntelligentDefaults(t *testing.T) {
+// TestSmartDefaults tests the new smart defaults system
+func TestSmartDefaults(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
-	
+
 	// Test error detection and color assignment
 	errorLog := Log{
 		Header: LogHeader{
@@ -884,22 +884,22 @@ func TestIntelligentDefaults(t *testing.T) {
 			"error_code": "CONN_TIMEOUT",
 		},
 	}
-	
+
 	jsonData, _ := json.Marshal(errorLog)
 	req := httptest.NewRequest("POST", "/api/logs", bytes.NewBuffer(jsonData))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
-	
+
 	createLog(w, req)
-	
+
 	if w.Code != http.StatusCreated {
 		t.Fatalf("Failed to create log: %d", w.Code)
 	}
-	
+
 	var response Log
 	json.Unmarshal(w.Body.Bytes(), &response)
-	
-	// Verify intelligent defaults
+
+	// Verify smart defaults
 	if response.Header.Type != "error" {
 		t.Errorf("Expected type 'error', got '%s'", response.Header.Type)
 	}
@@ -917,11 +917,11 @@ func TestIntelligentDefaults(t *testing.T) {
 
 // contains checks if a string contains a substring (case-insensitive helper)
 func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && 
-			(s[:len(substr)] == substr || 
-			 s[len(s)-len(substr):] == substr ||
-			 findInString(s, substr))))
+	return len(s) >= len(substr) && (s == substr ||
+		(len(s) > len(substr) &&
+			(s[:len(substr)] == substr ||
+				s[len(s)-len(substr):] == substr ||
+				findInString(s, substr))))
 }
 
 // findInString is a simple substring search helper

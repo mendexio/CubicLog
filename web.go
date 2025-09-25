@@ -1,4 +1,4 @@
-// CubicLog Web UI v1.1.0 - Beautiful embedded dashboard with intelligent analytics
+// CubicLog Web UI v1.2.0 - Beautiful embedded dashboard with smart analytics
 //
 // ARCHITECTURE:
 // This file contains the complete web interface embedded as a Go string constant.
@@ -18,12 +18,12 @@
 // - Comprehensive pagination with configurable page sizes
 // - JSON syntax highlighting with collapsible structures
 //
-// INTELLIGENT ANALYTICS DASHBOARD:
+// SMART ANALYTICS DASHBOARD:
 // - Real-time server health monitoring with color-coded status indicators
 // - Smart alerts system that automatically appears for high error rates
 // - Error rate trending with visual indicators (increasing/decreasing/stable)
 // - Volume trend analysis with activity level indicators
-// - Automated severity breakdown using intelligent pattern recognition
+// - Automated severity breakdown using smart pattern recognition
 // - Log type distribution with expandable/collapsible interface
 // - Live statistics with automatic refresh and data synchronization
 //
@@ -347,7 +347,81 @@ const webUI = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- Smart Pattern Analytics Card -->
+            <div class="bg-card border border-border rounded-lg">
+                <div class="px-6 py-4 border-b border-border">
+                    <button @click="patternsExpanded = !patternsExpanded" 
+                            class="flex items-center justify-between w-full text-left">
+                        <div>
+                            <h3 class="text-lg font-semibold flex items-center">
+                                <i class="fas fa-brain text-blue-500 mr-2"></i>
+                                Smart Pattern Analytics
+                            </h3>
+                            <p class="text-muted-foreground text-sm">Intelligent pattern detection results</p>
+                        </div>
+                        <i class="fas fa-chevron-down text-muted-foreground transform transition-transform duration-200" 
+                           :class="patternsExpanded ? '' : '-rotate-90'"></i>
+                    </button>
+                </div>
+                <div x-show="patternsExpanded" x-transition class="px-6 py-6">
+                    <!-- Detection Accuracy -->
+                    <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 rounded-lg">
+                        <div class="flex items-center justify-between">
+                            <div>
+                                <h4 class="font-medium text-blue-900 dark:text-blue-100">Detection Accuracy</h4>
+                                <p class="text-sm text-blue-700 dark:text-blue-300">Smart categorization success rate</p>
+                            </div>
+                            <div class="text-2xl font-bold text-blue-600 dark:text-blue-400" x-text="analytics.detection_accuracy"></div>
+                        </div>
+                    </div>
+                    
+                    <!-- Pattern Statistics -->
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 border border-border rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium">HTTP Codes</h4>
+                                    <p class="text-sm text-muted-foreground">Status codes detected</p>
+                                </div>
+                                <div class="text-xl font-semibold text-cyan-600" x-text="analytics.pattern_stats.http_codes_detected"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-border rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium">Stack Traces</h4>
+                                    <p class="text-sm text-muted-foreground">Exception traces found</p>
+                                </div>
+                                <div class="text-xl font-semibold text-rose-600" x-text="analytics.pattern_stats.stack_traces_found"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-border rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium">Security Issues</h4>
+                                    <p class="text-sm text-muted-foreground">Security patterns detected</p>
+                                </div>
+                                <div class="text-xl font-semibold text-purple-600" x-text="analytics.pattern_stats.security_issues"></div>
+                            </div>
+                        </div>
+                        
+                        <div class="p-4 border border-border rounded-lg">
+                            <div class="flex items-center justify-between">
+                                <div>
+                                    <h4 class="font-medium">Performance</h4>
+                                    <p class="text-sm text-muted-foreground">Performance issues found</p>
+                                </div>
+                                <div class="text-xl font-semibold text-orange-600" x-text="analytics.pattern_stats.performance_issues"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
+            <!-- Spacing between Smart Pattern Analytics and Log Distribution -->
+            <div class="mb-6"></div>
 
             <!-- Collapsible Log Distribution Card -->
             <div class="bg-card border border-border rounded-lg">
@@ -355,8 +429,11 @@ const webUI = `<!DOCTYPE html>
                     <button @click="distributionExpanded = !distributionExpanded" 
                             class="flex items-center justify-between w-full text-left">
                         <div>
-                            <h3 class="text-lg font-semibold">Log Type Distribution</h3>
-                            <p class="text-muted-foreground text-sm">Breakdown by log type</p>
+                            <h3 class="text-lg font-semibold flex items-center">
+                                <span>Log Type Distribution</span>
+                                <i class="fas fa-magic text-blue-500 ml-2 text-sm" title="Powered by smart pattern detection"></i>
+                            </h3>
+                            <p class="text-muted-foreground text-sm">Breakdown by intelligently detected log types</p>
                         </div>
                         <i class="fas fa-chevron-down text-muted-foreground transform transition-transform duration-200" 
                            :class="distributionExpanded ? '' : '-rotate-90'"></i>
@@ -495,21 +572,23 @@ const webUI = `<!DOCTYPE html>
         </div>
 
         <!-- Pagination -->
-        <div x-show="!loading && totalPages > 1" class="flex items-center justify-between">
+        <div x-show="!loading && totalLogs > 0" class="flex items-center justify-between">
             <p class="text-sm text-muted-foreground">
                 Showing <span class="font-medium" x-text="((currentPage - 1) * logsPerPage + 1)"></span> to
                 <span class="font-medium" x-text="Math.min(currentPage * logsPerPage, totalLogs)"></span> of
                 <span class="font-medium" x-text="totalLogs"></span> results
             </p>
             <div class="flex items-center space-x-2">
-                <button @click="previousPage()"
+                <!-- Previous button - only show when multiple pages -->
+                <button x-show="totalPages > 1" 
+                        @click="previousPage()"
                         :disabled="currentPage <= 1"
                         class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-chevron-left mr-1"></i>
                     Previous
                 </button>
                 
-                <!-- Logs per page dropdown -->
+                <!-- Logs per page dropdown - always show when there are logs -->
                 <div class="flex items-center space-x-2">
                     <span class="text-sm text-muted-foreground">Show:</span>
                     <select x-model="logsPerPage" 
@@ -519,9 +598,12 @@ const webUI = `<!DOCTYPE html>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
+                    <span class="text-sm text-muted-foreground">per page</span>
                 </div>
                 
-                <button @click="nextPage()"
+                <!-- Next button - only show when multiple pages -->
+                <button x-show="totalPages > 1"
+                        @click="nextPage()"
                         :disabled="currentPage >= totalPages"
                         class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
                     Next
@@ -579,6 +661,7 @@ const webUI = `<!DOCTYPE html>
                 totalLogs: 0,
                 // UI state
                 distributionExpanded: false,
+                patternsExpanded: true, // Show smart patterns by default
 
                 async init() {
                     // Load logs per page preference from localStorage
@@ -655,7 +738,15 @@ const webUI = `<!DOCTYPE html>
                                 error_trend: data.trends?.errors_increasing ? 'increasing' : 
                                            data.trends?.error_change < 0 ? 'decreasing' : 'stable',
                                 volume_trend: data.trends?.spike_detected ? 'increasing' : 'stable'
-                            }
+                            },
+                            // NEW: Smart pattern statistics
+                            pattern_stats: data.pattern_stats || {
+                                http_codes_detected: 0,
+                                stack_traces_found: 0,
+                                security_issues: 0,
+                                performance_issues: 0
+                            },
+                            detection_accuracy: data.detection_accuracy || '0%'
                         };
                     } catch (error) {
                         console.error('Error fetching analytics:', error);

@@ -51,6 +51,9 @@ dist/
 build/
 bin/
 
+# CubicLog binary
+cubiclog
+
 # Air (hot reload) tmp files
 tmp/
 
