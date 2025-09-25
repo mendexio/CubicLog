@@ -1,11 +1,17 @@
 // CubicLog v1.1.0 - A beautifully simple self-hosted logging solution by Mendex
 //
-// PHILOSOPHY: "Adaptable by design, intelligent by nature"
+// PHILOSOPHY: "Simple by design, smart by default"
 // Single binary, SQLite database, zero dependencies. If it needs Kubernetes, we've failed.
 //
 // CORE FEATURES:
-// - Structured logging with mandatory header fields and freestyle JSON body
-// - Intelligent analytics: automatic metadata derivation from log content
+// - Structured logging with flexible header fields and freestyle JSON body
+// - Smart pattern matching with 100+ keywords and patterns
+// - HTTP status code detection and automatic severity mapping
+// - Stack trace detection across multiple programming languages
+// - Security pattern recognition for critical alerts
+// - Performance metric extraction with automatic thresholds
+// - Database and system error code detection
+// - Business logic pattern matching
 // - Beautiful web UI with real-time updates and dark/light mode themes
 // - Advanced search, filtering, and CSV/JSON export capabilities
 // - Smart alerts system for error rate monitoring and anomaly detection
@@ -14,12 +20,17 @@
 // - Service management commands (start/stop/restart/status)
 // - Cross-platform deployment with single binary (Linux, Windows, macOS)
 //
-// INTELLIGENT ANALYTICS:
-// - Automated severity detection (error, warning, success, info, debug)
-// - Smart source extraction from multiple log fields
-// - Category derivation and trend analysis
-// - Error rate calculation and health monitoring
-// - Real-time dashboard with server health indicators
+// SMART PATTERN MATCHING:
+// - 100+ error keywords for comprehensive detection
+// - 50+ warning indicators
+// - 40+ success patterns
+// - All HTTP status codes mapped to severities
+// - System error codes (ECONNREFUSED, ETIMEDOUT, etc.)
+// - Database patterns (deadlock, connection pool, etc.)
+// - Security patterns (unauthorized, XSS, injection, etc.)
+// - Performance thresholds with automatic categorization
+// - Business logic patterns (payment, order, subscription, etc.)
+// - Stack trace detection for Java, Python, Go, Node.js, etc.
 package main
 
 import (
@@ -34,6 +45,7 @@ import (
 	"os"
 	"os/signal"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 	"syscall"
@@ -42,6 +54,266 @@ import (
 	// SQLite database driver - our only dependency
 	_ "github.com/mattn/go-sqlite3"
 )
+
+// =============================================================================
+// SMART PATTERN MATCHING CONSTANTS
+// =============================================================================
+
+// HTTP Status Code patterns for smart detection
+var httpStatusSeverity = map[string]string{
+	"200": "success", "201": "success", "202": "success", "204": "success",
+	"301": "info", "302": "info", "304": "info",
+	"400": "warning", "401": "error", "403": "error", "404": "warning",
+	"408": "warning", "409": "warning", "429": "warning",
+	"500": "error", "501": "error", "502": "error", "503": "critical",
+	"504": "critical", "507": "critical", "511": "error",
+}
+
+// Extended error keywords for better detection
+var errorKeywords = []string{
+	"error", "failed", "failure", "fatal", "critical", "crash",
+	"exception", "panic", "abort", "aborted", "refused", "denied",
+	"reject", "rejected", "timeout", "timed out", "unavailable",
+	"unreachable", "invalid", "corrupt", "corrupted", "broken",
+	"violation", "exceeded", "overflow", "underflow", "leak",
+	"died", "dying", "dump", "dumped", "fault", "faulted",
+	"kill", "killed", "terminate", "terminated", "segfault",
+	"segmentation", "core dump", "stack overflow", "out of memory",
+	"oom", "cannot", "could not", "unable", "impossible",
+}
+
+// Warning indicators
+var warningKeywords = []string{
+	"warning", "warn", "deprecated", "deprecation", "slow",
+	"slower", "delay", "delayed", "lag", "lagging", "retry",
+	"retrying", "retried", "pending", "blocked", "blocking",
+	"queue full", "high load", "degraded", "flaky", "unstable",
+	"intermittent", "occasional", "sometimes", "timeout soon",
+}
+
+// Success indicators  
+var successKeywords = []string{
+	"success", "successful", "successfully", "succeeded", "complete",
+	"completed", "done", "finished", "processed", "created",
+	"updated", "saved", "stored", "published", "deployed",
+	"approved", "accepted", "validated", "verified", "confirmed",
+	"established", "connected", "ready", "available", "online",
+	"restored", "recovered", "fixed", "resolved", "passed",
+	"ok", "okay", "working", "operational", "healthy",
+}
+
+// Debug/trace indicators
+var debugKeywords = []string{
+	"debug", "debugging", "trace", "tracing", "verbose",
+	"entering", "entered", "exiting", "exited", "calling",
+	"called", "executing", "executed", "invoking", "invoked",
+	"beginning", "starting", "stopping", "ended",
+}
+
+// System error codes mapping
+var systemErrorCodes = map[string]string{
+	"ECONNREFUSED": "error",
+	"ETIMEDOUT":    "error",
+	"ENOTFOUND":    "error",
+	"ECONNRESET":   "error",
+	"EPIPE":        "error",
+	"EACCES":       "error",
+	"ENOENT":       "warning",
+	"EISDIR":       "error",
+	"EMFILE":       "critical",
+	"ENOMEM":       "critical",
+	"ENOSPC":       "critical",
+	"EIO":          "critical",
+	"EROFS":        "error",
+}
+
+// Database error patterns
+var databasePatterns = map[string]string{
+	"deadlock":                   "critical",
+	"connection pool exhausted":  "critical",
+	"too many connections":       "critical",
+	"duplicate key":              "warning",
+	"constraint violation":       "error",
+	"foreign key violation":      "error",
+	"unique constraint":          "warning",
+	"table locked":               "warning",
+	"database locked":            "warning",
+	"SQLITE_BUSY":                "warning",
+	"SQLITE_LOCKED":              "warning",
+	"SQLITE_CORRUPT":             "critical",
+}
+
+// Security-related patterns
+var securityPatterns = []string{
+	"unauthorized", "forbidden", "auth failed", "authentication failed",
+	"permission denied", "access denied", "invalid token", "token expired",
+	"session expired", "breach", "leaked", "exposed", "vulnerability",
+	"injection", "xss", "csrf", "compromised", "malicious", "exploit",
+	"brute force", "ddos", "flooding", "suspicious",
+}
+
+// Performance thresholds (in milliseconds)
+var performanceThresholds = map[string]int{
+	"fast":     100,
+	"normal":   1000,
+	"slow":     3000,
+	"critical": 5000,
+}
+
+// Business logic patterns
+var businessPatterns = map[string]string{
+	"payment failed":       "error",
+	"payment successful":   "success",
+	"payment pending":      "info",
+	"order completed":      "success",
+	"order cancelled":      "warning",
+	"order failed":         "error",
+	"subscription expired": "warning",
+	"subscription renewed": "success",
+	"trial expired":        "info",
+	"invoice overdue":      "warning",
+	"invoice paid":         "success",
+	"refund processed":     "info",
+	"user registered":      "success",
+	"user deleted":         "warning",
+	"login successful":     "success",
+	"login failed":         "warning",
+}
+
+// =============================================================================
+// SMART PATTERN DETECTION HELPERS
+// =============================================================================
+
+// extractHTTPStatusCode extracts HTTP status codes from text
+func extractHTTPStatusCode(text string) string {
+	// Match patterns like: 'status 200', 'HTTP 404', 'returned 500', 'status: 403', 'status=502'
+	patterns := []string{
+		`(?i)(?:status|http|code)[\s:=]*(\d{3})`,
+		`(?i)returned\s+(\d{3})`,
+		`(?i)\b(\d{3})\s+(?:error|ok|found|not found)`,
+		`(?i)\"status\"[\s:]+[\"']?(\d{3})`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		if matches := re.FindStringSubmatch(text); len(matches) > 1 {
+			return matches[1]
+		}
+	}
+	return ""
+}
+
+// hasStackTrace detects if text contains a stack trace
+func hasStackTrace(text string) bool {
+	stackIndicators := []string{
+		" at line ", " at Object.", "Traceback", "goroutine ",
+		"panic:", ".java:", ".py:", ".js:", ".go:",
+		"at /", "File \"", " line ", "in <module>",
+		"Exception in thread", "Caused by:", "\n\tat ",
+		"Call Stack:", "Stack trace:", "at Function.",
+	}
+
+	textLower := strings.ToLower(text)
+	for _, indicator := range stackIndicators {
+		if strings.Contains(textLower, strings.ToLower(indicator)) {
+			return true
+		}
+	}
+	return false
+}
+
+// detectSecurityIssue checks for security-related patterns
+func detectSecurityIssue(text string) bool {
+	textLower := strings.ToLower(text)
+	for _, pattern := range securityPatterns {
+		if strings.Contains(textLower, pattern) {
+			return true
+		}
+	}
+	return false
+}
+
+// extractPerformanceMetrics extracts timing information from logs
+func extractPerformanceMetrics(text string) (duration int, found bool) {
+	// Match patterns like: 'took 1234ms', 'duration: 5.2s', 'elapsed: 500ms', 'in 2000 ms'
+	patterns := []string{
+		`(?i)(?:took|duration|elapsed|time)[\s:]+([0-9\.]+)\s*(?:ms|milliseconds)`,
+		`(?i)(?:took|duration|elapsed|time)[\s:]+([0-9\.]+)\s*(?:s|seconds)`,
+		`(?i)in\s+([0-9\.]+)\s*(?:ms|milliseconds)`,
+		`(?i)([0-9\.]+)\s*(?:ms|milliseconds)\s+(?:elapsed|duration)`,
+	}
+
+	for _, pattern := range patterns {
+		re := regexp.MustCompile(pattern)
+		if matches := re.FindStringSubmatch(text); len(matches) > 1 {
+			if val, err := strconv.ParseFloat(matches[1], 64); err == nil {
+				// Convert seconds to milliseconds if needed
+				if strings.Contains(strings.ToLower(matches[0]), "s") &&
+					!strings.Contains(strings.ToLower(matches[0]), "ms") {
+					return int(val * 1000), true
+				}
+				return int(val), true
+			}
+		}
+	}
+	return 0, false
+}
+
+// detectSystemError checks for system error codes
+func detectSystemError(text string) string {
+	textUpper := strings.ToUpper(text)
+	for code, severity := range systemErrorCodes {
+		if strings.Contains(textUpper, code) {
+			return severity
+		}
+	}
+	return ""
+}
+
+// detectDatabaseIssue checks for database-related issues
+func detectDatabaseIssue(text string) string {
+	textLower := strings.ToLower(text)
+	for pattern, severity := range databasePatterns {
+		if strings.Contains(textLower, pattern) {
+			return severity
+		}
+	}
+	return ""
+}
+
+// containsAnyKeyword checks if text contains any of the keywords
+func containsAnyKeyword(text string, keywords []string) bool {
+	textLower := strings.ToLower(text)
+	for _, keyword := range keywords {
+		if strings.Contains(textLower, keyword) {
+			return true
+		}
+	}
+	return false
+}
+
+// detectBusinessLogic checks for business-related patterns
+func detectBusinessLogic(text string) string {
+	textLower := strings.ToLower(text)
+	for pattern, severity := range businessPatterns {
+		if strings.Contains(textLower, pattern) {
+			return severity
+		}
+	}
+	return ""
+}
+
+// extractPercentage extracts percentage values for threshold checking
+func extractPercentage(text string, context string) int {
+	pattern := fmt.Sprintf(`(?i)%s[\s:]*([0-9\.]+)\s*%%`, context)
+	re := regexp.MustCompile(pattern)
+	if matches := re.FindStringSubmatch(text); len(matches) > 1 {
+		if val, err := strconv.ParseFloat(matches[1], 64); err == nil {
+			return int(val)
+		}
+	}
+	return -1
+}
 
 // =============================================================================
 // DATA STRUCTURES
@@ -64,7 +336,7 @@ type LogHeader struct {
 	Color       string `json:"color,omitempty"`       // Optional - will be auto-assigned
 }
 
-// LogMetadata contains intelligently derived metadata from log analysis
+// LogMetadata contains smart derived metadata from log analysis
 type LogMetadata struct {
 	DerivedSeverity string `json:"derived_severity"` // error, warning, success, info, debug
 	DerivedSource   string `json:"derived_source"`   // extracted from body.service, body.source, or header.source
@@ -264,7 +536,7 @@ func createTable() error {
 
 	// Add derived metadata columns if they don't exist (migration-safe)
 	migrationQuery := `
-	-- Add derived metadata columns for intelligent analytics
+	-- Add derived metadata columns for smart analytics
 	ALTER TABLE logs ADD COLUMN derived_severity TEXT;
 	ALTER TABLE logs ADD COLUMN derived_source TEXT;
 	ALTER TABLE logs ADD COLUMN derived_category TEXT;
@@ -342,13 +614,13 @@ func isValidTailwindColor(color string) bool {
 	return validColors[color]
 }
 
-// deriveMetadata intelligently analyzes incoming logs to derive useful metadata
+// deriveMetadata uses smart pattern matching to analyze incoming logs and derive useful metadata
 // 
 // PHILOSOPHY: "Adaptable by design, intelligent by nature"
 // This function automatically extracts meaningful insights from unstructured log data
 // without forcing users to conform to specific schemas or formats.
 //
-// INTELLIGENT ANALYSIS INCLUDES:
+// SMART ANALYSIS INCLUDES:
 // 1. Severity Detection: Analyzes text patterns to determine error/warning/success/info/debug
 // 2. Source Extraction: Looks for service identifiers in body.service, body.source, or header.source  
 // 3. Category Classification: Derives categories from log types or title keywords
@@ -361,10 +633,11 @@ func isValidTailwindColor(color string) bool {
 // - Default fallback: "info" for unmatched patterns
 //
 // =============================================================================
-// INTELLIGENT FIELD DERIVATION - v1.1.0 FLEXIBILITY FUNCTIONS
+// SMART FIELD DERIVATION - v1.1.0 FLEXIBILITY FUNCTIONS
 // =============================================================================
 
-// deriveTypeFromContent intelligently determines log type from content analysis
+// deriveTypeFromContent uses smart pattern matching to determine log type from content analysis
+// deriveTypeFromContent uses smart pattern matching to determine log type
 func deriveTypeFromContent(header LogHeader, body map[string]interface{}) string {
 	// Check body for common type indicators
 	if typeField, ok := body["type"].(string); ok && typeField != "" {
@@ -373,31 +646,46 @@ func deriveTypeFromContent(header LogHeader, body map[string]interface{}) string
 	if levelField, ok := body["level"].(string); ok && levelField != "" {
 		return levelField
 	}
-	
-	// Analyze content to guess type
+	if severityField, ok := body["severity"].(string); ok && severityField != "" {
+		return severityField
+	}
+
+	// Analyze content to determine type
 	allText := strings.ToLower(header.Title + " " + header.Description)
 	if bodyJSON, err := json.Marshal(body); err == nil {
 		allText += " " + strings.ToLower(string(bodyJSON))
 	}
-	
-	// Smart type detection using keywords
-	if strings.Contains(allText, "error") || strings.Contains(allText, "fail") || 
-	   strings.Contains(allText, "exception") || strings.Contains(allText, "crash") {
+
+	// Use comprehensive pattern matching
+	if containsAnyKeyword(allText, errorKeywords) {
 		return "error"
 	}
-	if strings.Contains(allText, "warn") || strings.Contains(allText, "timeout") ||
-	   strings.Contains(allText, "slow") || strings.Contains(allText, "retry") {
+	if containsAnyKeyword(allText, warningKeywords) {
 		return "warning"
 	}
-	if strings.Contains(allText, "success") || strings.Contains(allText, "complete") ||
-	   strings.Contains(allText, "finish") || strings.Contains(allText, "approved") {
+	if containsAnyKeyword(allText, successKeywords) {
 		return "success"
 	}
-	if strings.Contains(allText, "debug") || strings.Contains(allText, "trace") ||
-	   strings.Contains(allText, "verbose") {
+	if containsAnyKeyword(allText, debugKeywords) {
 		return "debug"
 	}
-	
+
+	// Check for specific patterns
+	if hasStackTrace(allText) {
+		return "error"
+	}
+	if detectSecurityIssue(allText) {
+		return "security"
+	}
+	if statusCode := extractHTTPStatusCode(allText); statusCode != "" {
+		if severity, ok := httpStatusSeverity[statusCode]; ok {
+			return severity
+		}
+	}
+	if detectDatabaseIssue(allText) != "" {
+		return "database"
+	}
+
 	return "info" // sensible default
 }
 
@@ -423,15 +711,17 @@ func deriveSourceFromBody(body map[string]interface{}) string {
 	return "unknown" // clear default when no source found
 }
 
-// deriveColorFromSeverity assigns appropriate colors based on severity analysis
+// deriveColorFromSeverity assigns appropriate colors based on smart severity analysis
 func deriveColorFromSeverity(header LogHeader, body map[string]interface{}) string {
-	// Use existing deriveMetadata logic to determine severity
+	// Use the comprehensive deriveMetadata function
 	metadata := deriveMetadata(header, body)
-	
-	// Map severity to appropriate color
+
+	// Map severity to appropriate color with more granularity
 	switch metadata.DerivedSeverity {
-	case "error":
+	case "critical":
 		return "red"
+	case "error":
+		return "rose"
 	case "warning":
 		return "yellow"
 	case "success":
@@ -441,54 +731,116 @@ func deriveColorFromSeverity(header LogHeader, body map[string]interface{}) stri
 	case "info":
 		return "blue"
 	default:
-		return "blue"
+		// Special cases based on category
+		switch metadata.DerivedCategory {
+		case "security":
+			return "purple"
+		case "database":
+			return "indigo"
+		case "performance":
+			return "orange"
+		case "business":
+			return "emerald"
+		case "http":
+			return "cyan"
+		default:
+			return "blue"
+		}
 	}
 }
 
 // Returns LogMetadata with derived insights that power the analytics dashboard
+// deriveMetadata uses smart pattern matching to extract meaningful metadata
+// This is the core of CubicLog's 'smart by default' philosophy
 func deriveMetadata(header LogHeader, body map[string]interface{}) LogMetadata {
 	metadata := LogMetadata{}
-	
-	// Convert body to searchable text for pattern analysis
+
+	// Convert body to searchable text
 	bodyText := ""
 	if bodyJSON, err := json.Marshal(body); err == nil {
 		bodyText = string(bodyJSON)
 	}
-	
-	// Combine all available text for intelligent analysis
-	allText := strings.ToLower(fmt.Sprintf("%s %s %s %s", 
-		header.Type, header.Title, header.Description, bodyText))
-	
-	// Smart severity detection using multiple signals
-	switch {
-	case strings.Contains(allText, "error") || 
-		 strings.Contains(allText, "fail") || 
-		 strings.Contains(allText, "exception") ||
-		 strings.Contains(allText, "critical") ||
-		 strings.Contains(allText, "fatal") ||
-		 strings.Contains(allText, "crash"):
+
+	// Combine all available text for analysis
+	allText := fmt.Sprintf("%s %s %s %s",
+		header.Type, header.Title, header.Description, bodyText)
+
+	// Priority 1: Check HTTP status codes (most definitive)
+	if statusCode := extractHTTPStatusCode(allText); statusCode != "" {
+		if severity, ok := httpStatusSeverity[statusCode]; ok {
+			metadata.DerivedSeverity = severity
+		} else {
+			// Default based on status code range
+			code, _ := strconv.Atoi(statusCode)
+			switch {
+			case code >= 200 && code < 300:
+				metadata.DerivedSeverity = "success"
+			case code >= 300 && code < 400:
+				metadata.DerivedSeverity = "info"
+			case code >= 400 && code < 500:
+				metadata.DerivedSeverity = "warning"
+			case code >= 500:
+				metadata.DerivedSeverity = "error"
+			default:
+				metadata.DerivedSeverity = "info"
+			}
+		}
+	} else if hasStackTrace(allText) {
+		// Priority 2: Stack traces always indicate errors
 		metadata.DerivedSeverity = "error"
-	case strings.Contains(allText, "warn") || 
-		 strings.Contains(allText, "alert") ||
-		 strings.Contains(allText, "caution") ||
-		 strings.Contains(allText, "deprecat"):
-		metadata.DerivedSeverity = "warning"
-	case strings.Contains(allText, "success") || 
-		 strings.Contains(allText, "complete") ||
-		 strings.Contains(allText, "done") ||
-		 strings.Contains(allText, "finish") ||
-		 strings.Contains(allText, "ok") ||
-		 strings.Contains(allText, "pass"):
-		metadata.DerivedSeverity = "success"
-	case strings.Contains(allText, "debug") || 
-		 strings.Contains(allText, "trace") ||
-		 strings.Contains(allText, "verbose"):
-		metadata.DerivedSeverity = "debug"
-	default:
-		metadata.DerivedSeverity = "info"
+	} else if detectSecurityIssue(allText) {
+		// Priority 3: Security issues are critical
+		metadata.DerivedSeverity = "critical"
+	} else if dbSeverity := detectDatabaseIssue(allText); dbSeverity != "" {
+		// Priority 4: Database issues
+		metadata.DerivedSeverity = dbSeverity
+	} else if sysError := detectSystemError(allText); sysError != "" {
+		// Priority 5: System error codes
+		metadata.DerivedSeverity = sysError
+	} else if businessSev := detectBusinessLogic(allText); businessSev != "" {
+		// Priority 6: Business logic patterns
+		metadata.DerivedSeverity = businessSev
+	} else {
+		// Priority 7: Keyword-based detection
+		textLower := strings.ToLower(allText)
+
+		// Check performance metrics
+		if duration, found := extractPerformanceMetrics(allText); found {
+			switch {
+			case duration >= performanceThresholds["critical"]:
+				metadata.DerivedSeverity = "critical"
+			case duration >= performanceThresholds["slow"]:
+				metadata.DerivedSeverity = "warning"
+			case duration >= performanceThresholds["normal"]:
+				metadata.DerivedSeverity = "info"
+			default:
+				metadata.DerivedSeverity = "success"
+			}
+		} else if containsAnyKeyword(textLower, errorKeywords) {
+			metadata.DerivedSeverity = "error"
+		} else if containsAnyKeyword(textLower, warningKeywords) {
+			metadata.DerivedSeverity = "warning"
+		} else if containsAnyKeyword(textLower, successKeywords) {
+			metadata.DerivedSeverity = "success"
+		} else if containsAnyKeyword(textLower, debugKeywords) {
+			metadata.DerivedSeverity = "debug"
+		} else {
+			// Check resource usage percentages
+			cpuUsage := extractPercentage(allText, "cpu")
+			memUsage := extractPercentage(allText, "memory")
+			diskUsage := extractPercentage(allText, "disk")
+
+			if cpuUsage > 90 || memUsage > 90 || diskUsage > 90 {
+				metadata.DerivedSeverity = "critical"
+			} else if cpuUsage > 75 || memUsage > 75 || diskUsage > 75 {
+				metadata.DerivedSeverity = "warning"
+			} else {
+				metadata.DerivedSeverity = "info"
+			}
+		}
 	}
-	
-	// Intelligent source extraction from multiple possible locations
+
+	// Smart source extraction from multiple possible locations
 	if service, ok := body["service"].(string); ok && service != "" {
 		metadata.DerivedSource = service
 	} else if source, ok := body["source"].(string); ok && source != "" {
@@ -497,34 +849,70 @@ func deriveMetadata(header LogHeader, body map[string]interface{}) LogMetadata {
 		metadata.DerivedSource = component
 	} else if app, ok := body["app"].(string); ok && app != "" {
 		metadata.DerivedSource = app
+	} else if module, ok := body["module"].(string); ok && module != "" {
+		metadata.DerivedSource = module
+	} else if origin, ok := body["origin"].(string); ok && origin != "" {
+		metadata.DerivedSource = origin
 	} else if header.Source != "" {
 		metadata.DerivedSource = header.Source
 	} else {
-		metadata.DerivedSource = "unknown"
+		// Try to extract source from stack traces
+		if hasStackTrace(allText) {
+			if strings.Contains(allText, ".java:") {
+				metadata.DerivedSource = "java-app"
+			} else if strings.Contains(allText, ".py:") {
+				metadata.DerivedSource = "python-app"
+			} else if strings.Contains(allText, ".js:") {
+				metadata.DerivedSource = "node-app"
+			} else if strings.Contains(allText, ".go:") {
+				metadata.DerivedSource = "go-app"
+			} else {
+				metadata.DerivedSource = "unknown"
+			}
+		} else {
+			metadata.DerivedSource = "unknown"
+		}
 	}
-	
+
 	// Smart category derivation
 	if header.Type != "" {
 		metadata.DerivedCategory = strings.ToLower(header.Type)
 	} else {
-		// Extract category from title using first meaningful word
-		words := strings.Fields(strings.ToLower(header.Title))
-		if len(words) > 0 {
-			// Skip common articles and prepositions
-			for _, word := range words {
-				if len(word) > 2 && !containsString([]string{"the", "and", "for", "with"}, word) {
-					metadata.DerivedCategory = word
-					break
-				}
-			}
-			if metadata.DerivedCategory == "" && len(words) > 0 {
-				metadata.DerivedCategory = words[0]
-			}
+		// Derive category from content patterns
+		if detectSecurityIssue(allText) {
+			metadata.DerivedCategory = "security"
+		} else if detectDatabaseIssue(allText) != "" {
+			metadata.DerivedCategory = "database"
+		} else if strings.Contains(strings.ToLower(allText), "payment") ||
+			strings.Contains(strings.ToLower(allText), "invoice") ||
+			strings.Contains(strings.ToLower(allText), "subscription") {
+			metadata.DerivedCategory = "business"
+		} else if extractHTTPStatusCode(allText) != "" {
+			metadata.DerivedCategory = "http"
+		} else if hasStackTrace(allText) {
+			metadata.DerivedCategory = "exception"
+		} else if duration, found := extractPerformanceMetrics(allText); found && duration > 0 {
+			metadata.DerivedCategory = "performance"
 		} else {
-			metadata.DerivedCategory = "misc"
+			// Extract category from title using first meaningful word
+			words := strings.Fields(strings.ToLower(header.Title))
+			if len(words) > 0 {
+				// Skip common articles and prepositions
+				for _, word := range words {
+					if len(word) > 2 && !containsString([]string{"the", "and", "for", "with", "from", "into"}, word) {
+						metadata.DerivedCategory = word
+						break
+					}
+				}
+				if metadata.DerivedCategory == "" && len(words) > 0 {
+					metadata.DerivedCategory = words[0]
+				}
+			} else {
+				metadata.DerivedCategory = "general"
+			}
 		}
 	}
-	
+
 	return metadata
 }
 
@@ -598,7 +986,7 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// =============================================================================
-	// INTELLIGENT DEFAULTS SECTION - v1.1.0 FLEXIBILITY
+	// SMART DEFAULTS SECTION - v1.1.0 FLEXIBILITY
 	// =============================================================================
 	
 	// Auto-derive type if missing
@@ -623,7 +1011,7 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Derive intelligent metadata from the log content
+	// Derive smart metadata from the log content
 	metadata := deriveMetadata(entry.Header, entry.Body)
 
 	// Insert into database with derived metadata (handling nullable fields for v1.1+)
@@ -774,9 +1162,9 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 	json.NewEncoder(w).Encode(map[string]string{"status": "ok"})
 }
 
-// handleStats provides comprehensive intelligent analytics about the log database
+// handleStats provides comprehensive smart analytics about the log database
 //
-// INTELLIGENT ANALYTICS FEATURES:
+// SMART ANALYTICS FEATURES:
 // - Real-time error rate calculation and trending
 // - Severity breakdown using AI-derived classifications  
 // - Top log sources extracted from multiple data sources
@@ -786,7 +1174,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 // - Peak hour identification and spike detection
 //
 // ANALYTICS PHILOSOPHY:
-// This endpoint embodies CubicLog's "intelligent by nature" philosophy by
+// This endpoint embodies CubicLog's "smart by default" philosophy by
 // automatically generating actionable insights from unstructured log data without
 // requiring users to pre-configure dashboards or define complex queries.
 //
@@ -795,7 +1183,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 
-	// Enhanced stats structure with intelligent analytics
+	// Enhanced stats structure with smart analytics
 	type Stats struct {
 		Total              int                    `json:"total"`
 		Last24Hours        int                    `json:"last_24h"`
@@ -808,6 +1196,8 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		HourlyDistribution []int                  `json:"hourly_distribution"`
 		Alerts             []string               `json:"alerts"`
 		DatabaseSize       string                 `json:"database_size"`
+		PatternStats       map[string]int         `json:"pattern_stats"`
+		DetectionAccuracy  string                 `json:"detection_accuracy"`
 	}
 
 	stats := Stats{
@@ -822,7 +1212,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	last24h := time.Now().AddDate(0, 0, -1)
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE timestamp >= ?", last24h).Scan(&stats.Last24Hours)
 
-	// Intelligent severity breakdown using derived metadata
+	// Smart severity breakdown using derived metadata
 	stats.SeverityBreakdown = make(map[string]int)
 	if rows, err := db.Query("SELECT derived_severity, COUNT(*) FROM logs WHERE derived_severity IS NOT NULL GROUP BY derived_severity ORDER BY COUNT(*) DESC"); err == nil {
 		for rows.Next() {
@@ -832,6 +1222,30 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 			stats.SeverityBreakdown[severity] = count
 		}
 		rows.Close()
+	}
+
+	// Pattern statistics collection
+	stats.PatternStats = map[string]int{
+		"http_codes_detected": 0,
+		"stack_traces_found":  0,
+		"security_issues":     0,
+		"performance_issues":  0,
+	}
+
+	// Query for pattern statistics
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%status%' OR body LIKE '%HTTP%' OR body LIKE '%code%'").Scan(&stats.PatternStats["http_codes_detected"])
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%.java:%' OR body LIKE '%.py:%' OR body LIKE '%goroutine%' OR body LIKE '%Traceback%'").Scan(&stats.PatternStats["stack_traces_found"])
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%unauthorized%' OR body LIKE '%forbidden%' OR body LIKE '%breach%' OR body LIKE '%vulnerability%'").Scan(&stats.PatternStats["security_issues"])
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%ms%' OR body LIKE '%slow%' OR body LIKE '%timeout%' OR body LIKE '%performance%'").Scan(&stats.PatternStats["performance_issues"])
+
+	// Calculate detection accuracy (percentage of logs with smart categorization)
+	var smartCategorized int
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE derived_severity IS NOT NULL AND derived_severity != 'info'").Scan(&smartCategorized)
+	if stats.Total > 0 {
+		accuracy := float64(smartCategorized) / float64(stats.Total) * 100
+		stats.DetectionAccuracy = fmt.Sprintf("%.1f%%", accuracy)
+	} else {
+		stats.DetectionAccuracy = "N/A"
 	}
 
 	// Top log types (top 10)

@@ -1,4 +1,4 @@
-// CubicLog Web UI v1.1.0 - Beautiful embedded dashboard with intelligent analytics
+// CubicLog Web UI v1.1.0 - Beautiful embedded dashboard with smart analytics
 //
 // ARCHITECTURE:
 // This file contains the complete web interface embedded as a Go string constant.
@@ -18,12 +18,12 @@
 // - Comprehensive pagination with configurable page sizes
 // - JSON syntax highlighting with collapsible structures
 //
-// INTELLIGENT ANALYTICS DASHBOARD:
+// SMART ANALYTICS DASHBOARD:
 // - Real-time server health monitoring with color-coded status indicators
 // - Smart alerts system that automatically appears for high error rates
 // - Error rate trending with visual indicators (increasing/decreasing/stable)
 // - Volume trend analysis with activity level indicators
-// - Automated severity breakdown using intelligent pattern recognition
+// - Automated severity breakdown using smart pattern recognition
 // - Log type distribution with expandable/collapsible interface
 // - Live statistics with automatic refresh and data synchronization
 //

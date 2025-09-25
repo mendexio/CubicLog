@@ -6,13 +6,13 @@ A beautifully simple self-hosted logging solution. No Kubernetes, no complexity,
 
 ## Features
 
-### 🧠 **Intelligent Analytics**
-- 🤖 **Automated metadata derivation** - Smart extraction of severity, sources, and categories
+### ⚡ **Smart Analytics**
+- 🤖 **Smart metadata extraction** - Automatic extraction of severity, sources, and categories
 - 📈 **Real-time error rate monitoring** with trend analysis
 - 🚨 **Smart alerts system** - Automatic notifications for high error rates and anomalies
 - 📊 **Server health dashboard** - Color-coded system status indicators
 - 🔄 **Volume trend analysis** - Activity level monitoring (increasing/stable/decreasing)
-- 🎯 **Pattern recognition** - Intelligent severity detection from log content
+- 🎯 **Pattern recognition** - Smart severity detection from log content
 
 ### 🎨 **Beautiful Interface**
 - 🎨 **22 Tailwind CSS colors** for comprehensive log categorization
@@ -73,8 +73,8 @@ That's it! 🎉
 
 ## What's New in v1.1.0
 
-🎉 **True Flexible Logging** - Only title is required, everything else is intelligently derived
-🧠 **Smarter Analytics** - Enhanced pattern detection and automatic field population
+🎉 **True Flexible Logging** - Only title is required, everything else is automatically derived
+⚡ **Smarter Analytics** - Enhanced pattern detection and automatic field population
 ✨ **Backward Compatible** - All v1.0.0 logs continue to work exactly the same
 
 ## Usage - Maximum Flexibility
@@ -90,7 +90,7 @@ curl -X POST http://localhost:8080/api/logs \
       "title": "Something happened"
     }
   }'
-# CubicLog will intelligently derive: type, color, source
+# CubicLog will automatically derive: type, color, source
 ```
 
 **Partially Structured Log:**
@@ -150,7 +150,7 @@ curl -X POST http://localhost:8080/api/logs \
   }'
 ```
 
-### Intelligent Defaults in Action
+### Smart Defaults in Action
 
 CubicLog v1.1.0 automatically:
 - **Detects severity** from any text in title, description, or body
@@ -169,16 +169,16 @@ CubicLog v1.1.0 automatically:
 | `source` | ❌ No | Origin service/component | Yes, from body fields |
 | `color` | ❌ No | Tailwind CSS color | Yes, based on severity |
 
-### Philosophy: 'Adaptable by Design, Intelligent by Nature'
+### Philosophy: 'Simple by Design, Smart by Default'
 
 Send logs however makes sense for your application:
 - Structured or unstructured ✅
 - With or without metadata ✅
 - Any JSON structure in the body ✅
-- Missing fields are intelligently derived ✅
+- Missing fields are automatically derived ✅
 - Only title is mandatory ✅
 
-CubicLog figures out the rest using intelligent pattern matching and content analysis.
+CubicLog figures out the rest using smart pattern matching and content analysis.
 
 ## Migration from v1.0.0 to v1.1.0
 
@@ -186,7 +186,7 @@ CubicLog figures out the rest using intelligent pattern matching and content ana
 
 **New Capabilities:**
 - Only 'title' field is now required (was all 5 fields)
-- Intelligent field derivation for missing values
+- Smart field derivation for missing values
 - Auto-color assignment based on severity detection
 - Source extraction from body fields (including nested)
 - Type detection from content analysis
@@ -229,15 +229,15 @@ CubicLog figures out the rest using intelligent pattern matching and content ana
 
 All three work perfectly in v1.1.0!
 
-## 🧠 Intelligent Analytics
+## ⚡ Smart Analytics
 
-CubicLog v1.1.0 features enhanced intelligent analytics that automatically derive insights from your logs without requiring structured schemas or complex configuration.
+CubicLog v1.1.0 features enhanced smart analytics that automatically derive insights from your logs without requiring structured schemas or complex configuration.
 
-### Philosophy: "Adaptable by Design, Intelligent by Nature"
+### Philosophy: "Simple by Design, Smart by Default"
 
-CubicLog allows you to send **any JSON structure** in the log body while automatically extracting meaningful insights through pattern recognition and intelligent analysis.
+CubicLog allows you to send **any JSON structure** in the log body while automatically extracting meaningful insights through pattern recognition and smart analysis.
 
-### 🤖 Automated Metadata Derivation
+### 🤖 Smart Metadata Extraction
 
 Every log automatically gets analyzed to derive:
 
@@ -250,7 +250,7 @@ Every log automatically gets analyzed to derive:
 
 **Smart Source Extraction:**
 - Automatically extracts service names from `body.service`, `body.source`, or `header.source`
-- Intelligently identifies the most relevant source identifier
+- Automatically identifies the most relevant source identifier
 - Powers the analytics dashboard with accurate service mapping
 
 **Category Classification:**
@@ -313,7 +313,7 @@ curl http://localhost:8080/api/stats
 }
 ```
 
-### 💡 Intelligent Insights Examples
+### 💡 Smart Insights Examples
 
 **Automatic Error Detection:**
 ```json
@@ -352,7 +352,7 @@ curl http://localhost:8080/api/stats
 ```
 **→ Automatically derived: severity="success", source="user-authentication-api"**
 
-The intelligent analytics work **behind the scenes** with zero configuration, turning your unstructured logs into actionable insights automatically.
+The smart analytics work **behind the scenes** with zero configuration, turning your unstructured logs into actionable insights automatically.
 
 ## Configuration
 

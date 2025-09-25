@@ -1,9 +1,9 @@
-// CubicLog Test Suite v1.1.0 - Comprehensive testing for core functionality and intelligent analytics
+// CubicLog Test Suite v1.1.0 - Comprehensive testing for core functionality and smart analytics
 //
 // TESTING PHILOSOPHY:
 // Comprehensive test coverage for all CubicLog functionality using in-memory SQLite 
 // databases for complete isolation and maximum speed. Tests verify both core logging
-// functionality and advanced intelligent analytics features.
+// functionality and advanced smart analytics features.
 //
 // CORE FUNCTIONALITY TESTS:
 // - Health check endpoint validation
@@ -13,8 +13,8 @@
 // - Error handling and edge cases
 // - CORS headers and security measures
 //
-// INTELLIGENT ANALYTICS TESTS:
-// - Metadata derivation from unstructured log content
+// SMART ANALYTICS TESTS:
+// - Metadata extraction from unstructured log content
 // - Severity detection using pattern matching algorithms
 // - Source extraction from multiple data fields
 // - Enhanced statistics endpoint with real-time analytics
@@ -249,7 +249,7 @@ func TestCreateLogValidationErrors(t *testing.T) {
 				}
 			} else {
 				if w.Code != http.StatusCreated {
-					t.Errorf("Expected status 201 (intelligent defaults), got %d: %s", w.Code, w.Body.String())
+					t.Errorf("Expected status 201 (smart field extraction), got %d: %s", w.Code, w.Body.String())
 				}
 			}
 		})
@@ -445,10 +445,10 @@ func TestInvalidJSONHandling(t *testing.T) {
 }
 
 // =============================================================================
-// INTELLIGENCE FEATURE TESTS
+// SMART FEATURE TESTS
 // =============================================================================
 
-// TestDeriveMetadata tests the intelligent metadata derivation function
+// TestDeriveMetadata tests the smart metadata extraction function
 func TestDeriveMetadata(t *testing.T) {
 	testCases := []struct {
 		name     string
@@ -573,8 +573,8 @@ func TestDeriveMetadata(t *testing.T) {
 	}
 }
 
-// TestIntelligentStatsEndpoint tests the enhanced stats endpoint with analytics
-func TestIntelligentStatsEndpoint(t *testing.T) {
+// TestSmartStatsEndpoint tests the enhanced stats endpoint with analytics
+func TestSmartStatsEndpoint(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
 
@@ -668,7 +668,7 @@ func TestIntelligentStatsEndpoint(t *testing.T) {
 		t.Error("Expected severity_breakdown in stats response")
 	}
 
-	// Verify top sources (derived from body.service)
+	// Verify top sources (automatically extracted from body.service)
 	if topSources, ok := stats["top_sources"].([]interface{}); ok {
 		if len(topSources) == 0 {
 			t.Error("Expected top_sources to have entries")
@@ -850,7 +850,7 @@ func TestFlexibleLogCreation(t *testing.T) {
 					t.Errorf("Expected status 201, got %d: %s", w.Code, w.Body.String())
 				}
 				
-				// Verify intelligent defaults were applied
+				// Verify smart defaults were applied
 				var response Log
 				json.Unmarshal(w.Body.Bytes(), &response)
 				
@@ -859,7 +859,7 @@ func TestFlexibleLogCreation(t *testing.T) {
 					t.Error("Expected color to be auto-assigned")
 				}
 				if response.Header.Type == "" {
-					t.Error("Expected type to be derived")
+					t.Error("Expected type to be automatically extracted")
 				}
 			} else {
 				if w.Code == http.StatusCreated {
@@ -870,8 +870,8 @@ func TestFlexibleLogCreation(t *testing.T) {
 	}
 }
 
-// TestIntelligentDefaults tests the new intelligent defaults system
-func TestIntelligentDefaults(t *testing.T) {
+// TestSmartDefaults tests the new smart defaults system
+func TestSmartDefaults(t *testing.T) {
 	cleanup := setupTestDB(t)
 	defer cleanup()
 	
@@ -899,7 +899,7 @@ func TestIntelligentDefaults(t *testing.T) {
 	var response Log
 	json.Unmarshal(w.Body.Bytes(), &response)
 	
-	// Verify intelligent defaults
+	// Verify smart defaults
 	if response.Header.Type != "error" {
 		t.Errorf("Expected type 'error', got '%s'", response.Header.Type)
 	}
