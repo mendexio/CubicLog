@@ -1,4 +1,4 @@
-// CubicLog Web UI v1.1.0 - Beautiful embedded dashboard with smart analytics
+// CubicLog Web UI v1.2.0 - Beautiful embedded dashboard with smart analytics
 //
 // ARCHITECTURE:
 // This file contains the complete web interface embedded as a Go string constant.

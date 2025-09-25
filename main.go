@@ -1,4 +1,4 @@
-// CubicLog v1.1.0 - A beautifully simple self-hosted logging solution by Mendex
+// CubicLog v1.2.0 - A beautifully simple self-hosted logging solution by Mendex
 //
 // PHILOSOPHY: "Simple by design, smart by default"
 // Single binary, SQLite database, zero dependencies. If it needs Kubernetes, we've failed.
@@ -502,7 +502,7 @@ type SourceCount struct {
 var db *sql.DB
 
 // Version information
-const VERSION = "1.1.0"
+const VERSION = "1.2.0"
 
 // Default PID file location
 const DEFAULT_PID_FILE = "./cubiclog.pid"
@@ -772,7 +772,7 @@ func isValidTailwindColor(color string) bool {
 // - Default fallback: "info" for unmatched patterns
 //
 // =============================================================================
-// SMART FIELD DERIVATION - v1.1.0 FLEXIBILITY FUNCTIONS
+// SMART FIELD DERIVATION - v1.2.0 ENHANCED FUNCTIONS
 // =============================================================================
 
 // deriveTypeFromContent uses smart pattern matching to determine log type from content analysis
@@ -1133,7 +1133,7 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// =============================================================================
-	// SMART DEFAULTS SECTION - v1.1.0 FLEXIBILITY
+	// SMART DEFAULTS SECTION - v1.2.0 ENHANCED SOURCE DETECTION
 	// =============================================================================
 
 	// Auto-derive type if missing
