@@ -315,6 +315,145 @@ func extractPercentage(text string, context string) int {
 	return -1
 }
 
+// smartSourceExtraction intelligently derives service names from log content
+func smartSourceExtraction(allText string) string {
+	textLower := strings.ToLower(allText)
+	
+	// Database-related patterns
+	if strings.Contains(textLower, "database") || strings.Contains(textLower, "sql") || 
+	   strings.Contains(textLower, "query") || strings.Contains(textLower, "table") {
+		if strings.Contains(textLower, "postgres") {
+			return "postgresql-db"
+		} else if strings.Contains(textLower, "mysql") {
+			return "mysql-db"
+		} else if strings.Contains(textLower, "mongo") {
+			return "mongodb"
+		} else if strings.Contains(textLower, "redis") {
+			return "redis-cache"
+		} else if strings.Contains(textLower, "sqlite") {
+			return "sqlite-db"
+		}
+		return "database-service"
+	}
+	
+	// Authentication/Security patterns
+	if strings.Contains(textLower, "login") || strings.Contains(textLower, "auth") || 
+	   strings.Contains(textLower, "token") || strings.Contains(textLower, "session") {
+		return "auth-service"
+	}
+	
+	// Payment processing patterns
+	if strings.Contains(textLower, "payment") || strings.Contains(textLower, "stripe") || 
+	   strings.Contains(textLower, "paypal") || strings.Contains(textLower, "billing") {
+		return "payment-service"
+	}
+	
+	// Email/Notification patterns
+	if strings.Contains(textLower, "email") || strings.Contains(textLower, "smtp") || 
+	   strings.Contains(textLower, "notification") || strings.Contains(textLower, "mailgun") {
+		return "email-service"
+	}
+	
+	// API Gateway patterns
+	if strings.Contains(textLower, "api gateway") || strings.Contains(textLower, "endpoint") || 
+	   strings.Contains(textLower, "route") || strings.Contains(textLower, "/api/") {
+		return "api-gateway"
+	}
+	
+	// User management patterns
+	if strings.Contains(textLower, "user") && (strings.Contains(textLower, "profile") || 
+	   strings.Contains(textLower, "register") || strings.Contains(textLower, "account")) {
+		return "user-service"
+	}
+	
+	// Order/Shopping patterns
+	if strings.Contains(textLower, "order") || strings.Contains(textLower, "cart") || 
+	   strings.Contains(textLower, "checkout") || strings.Contains(textLower, "inventory") {
+		return "order-service"
+	}
+	
+	// File/Storage patterns
+	if strings.Contains(textLower, "file") || strings.Contains(textLower, "upload") || 
+	   strings.Contains(textLower, "download") || strings.Contains(textLower, "s3") || 
+	   strings.Contains(textLower, "storage") {
+		return "file-service"
+	}
+	
+	// Search patterns
+	if strings.Contains(textLower, "search") || strings.Contains(textLower, "elasticsearch") || 
+	   strings.Contains(textLower, "solr") || strings.Contains(textLower, "query") {
+		return "search-service"
+	}
+	
+	// Monitoring/Health patterns
+	if strings.Contains(textLower, "health") || strings.Contains(textLower, "monitor") || 
+	   strings.Contains(textLower, "metrics") || strings.Contains(textLower, "prometheus") {
+		return "monitoring-service"
+	}
+	
+	// Load balancer patterns
+	if strings.Contains(textLower, "load balan") || strings.Contains(textLower, "nginx") || 
+	   strings.Contains(textLower, "haproxy") || strings.Contains(textLower, "upstream") {
+		return "load-balancer"
+	}
+	
+	// Cache patterns
+	if strings.Contains(textLower, "cache") && !strings.Contains(textLower, "redis") {
+		return "cache-service"
+	}
+	
+	// Configuration patterns
+	if strings.Contains(textLower, "config") || strings.Contains(textLower, "setting") || 
+	   strings.Contains(textLower, "environment") {
+		return "config-service"
+	}
+	
+	// Backup patterns
+	if strings.Contains(textLower, "backup") || strings.Contains(textLower, "restore") || 
+	   strings.Contains(textLower, "archive") {
+		return "backup-service"
+	}
+	
+	// Reporting patterns
+	if strings.Contains(textLower, "report") || strings.Contains(textLower, "analytics") || 
+	   strings.Contains(textLower, "dashboard") {
+		return "reporting-service"
+	}
+	
+	// Deployment/CI/CD patterns
+	if strings.Contains(textLower, "deploy") || strings.Contains(textLower, "build") || 
+	   strings.Contains(textLower, "pipeline") || strings.Contains(textLower, "docker") || 
+	   strings.Contains(textLower, "kubernetes") || strings.Contains(textLower, "k8s") {
+		return "deployment-service"
+	}
+	
+	// CDN patterns
+	if strings.Contains(textLower, "cdn") || strings.Contains(textLower, "cloudflare") || 
+	   strings.Contains(textLower, "static") {
+		return "cdn-service"
+	}
+	
+	// HTTP status code patterns (fallback to web service)
+	if extractHTTPStatusCode(allText) != "" {
+		return "web-service"
+	}
+	
+	// If all else fails, try to extract from common service naming patterns
+	// Look for patterns like "service-name-123" or "app-component"
+	words := strings.Fields(textLower)
+	for _, word := range words {
+		if strings.Contains(word, "service") || strings.Contains(word, "app") {
+			// Clean and return the service name
+			cleanWord := strings.Trim(word, ".,!?:;\"'()[]{}") 
+			if len(cleanWord) > 2 {
+				return cleanWord
+			}
+		}
+	}
+	
+	return "application-service" // Better default than "unknown"
+}
+
 // =============================================================================
 // DATA STRUCTURES
 // =============================================================================
@@ -708,7 +847,14 @@ func deriveSourceFromBody(body map[string]interface{}) string {
 		}
 	}
 
-	return "unknown" // clear default when no source found
+	// If no explicit source found, use smart content-based extraction
+	// Include both body content and any available header information for better detection
+	bodyJSON, err := json.Marshal(body)
+	if err == nil {
+		return smartSourceExtraction(string(bodyJSON))
+	}
+
+	return "application-service" // Better default than "unknown"
 }
 
 // deriveColorFromSeverity assigns appropriate colors based on smart severity analysis
@@ -870,7 +1016,8 @@ func deriveMetadata(header LogHeader, body map[string]interface{}) LogMetadata {
 				metadata.DerivedSource = "unknown"
 			}
 		} else {
-			metadata.DerivedSource = "unknown"
+			// Use smart content-based source extraction
+			metadata.DerivedSource = smartSourceExtraction(allText)
 		}
 	}
 
