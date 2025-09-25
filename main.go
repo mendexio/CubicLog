@@ -91,7 +91,7 @@ var warningKeywords = []string{
 	"intermittent", "occasional", "sometimes", "timeout soon",
 }
 
-// Success indicators  
+// Success indicators
 var successKeywords = []string{
 	"success", "successful", "successfully", "succeeded", "complete",
 	"completed", "done", "finished", "processed", "created",
@@ -129,18 +129,18 @@ var systemErrorCodes = map[string]string{
 
 // Database error patterns
 var databasePatterns = map[string]string{
-	"deadlock":                   "critical",
-	"connection pool exhausted":  "critical",
-	"too many connections":       "critical",
-	"duplicate key":              "warning",
-	"constraint violation":       "error",
-	"foreign key violation":      "error",
-	"unique constraint":          "warning",
-	"table locked":               "warning",
-	"database locked":            "warning",
-	"SQLITE_BUSY":                "warning",
-	"SQLITE_LOCKED":              "warning",
-	"SQLITE_CORRUPT":             "critical",
+	"deadlock":                  "critical",
+	"connection pool exhausted": "critical",
+	"too many connections":      "critical",
+	"duplicate key":             "warning",
+	"constraint violation":      "error",
+	"foreign key violation":     "error",
+	"unique constraint":         "warning",
+	"table locked":              "warning",
+	"database locked":           "warning",
+	"SQLITE_BUSY":               "warning",
+	"SQLITE_LOCKED":             "warning",
+	"SQLITE_CORRUPT":            "critical",
 }
 
 // Security-related patterns
@@ -381,13 +381,13 @@ func main() {
 		apiKey        = flag.String("api-key", os.Getenv("API_KEY"), "API key for authentication (optional)")
 		retentionDays = flag.Int("retention", getEnvInt("RETENTION_DAYS", 30), "Days to retain logs")
 		pidFile       = flag.String("pid-file", DEFAULT_PID_FILE, "Path to PID file")
-		
+
 		// Service management commands
-		stop     = flag.Bool("stop", false, "Stop CubicLog server")
-		restart  = flag.Bool("restart", false, "Restart CubicLog server") 
-		status   = flag.Bool("status", false, "Check CubicLog server status")
-		cleanup  = flag.Bool("cleanup", false, "Run cleanup and exit")
-		version  = flag.Bool("version", false, "Show version and exit")
+		stop    = flag.Bool("stop", false, "Stop CubicLog server")
+		restart = flag.Bool("restart", false, "Restart CubicLog server")
+		status  = flag.Bool("status", false, "Check CubicLog server status")
+		cleanup = flag.Bool("cleanup", false, "Run cleanup and exit")
+		version = flag.Bool("version", false, "Show version and exit")
 	)
 	flag.Parse()
 
@@ -402,12 +402,12 @@ func main() {
 		handleStatus(*pidFile)
 		return
 	}
-	
+
 	if *stop {
 		handleStop(*pidFile)
 		return
 	}
-	
+
 	if *restart {
 		handleRestart(*pidFile, os.Args)
 		return
@@ -451,7 +451,7 @@ func main() {
 
 	// Setup graceful shutdown
 	server := &http.Server{Addr: ":" + *port}
-	
+
 	// Channel to listen for interrupt signal
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
@@ -496,12 +496,12 @@ func main() {
 
 // setupRoutes configures all HTTP endpoints
 func setupRoutes(apiKey string) {
-	http.HandleFunc("/", serveWeb)                                                    // Web dashboard (public)
-	http.HandleFunc("/health", handleHealth)                                          // Health check (public)
-	http.HandleFunc("/api/stats", handleStats)                                        // Statistics (public)
-	http.HandleFunc("/api/logs", authMiddleware(apiKey, handleLogs))                  // Log CRUD operations
-	http.HandleFunc("/api/export/csv", authMiddleware(apiKey, handleExportCSV))       // CSV export
-	http.HandleFunc("/api/export/json", authMiddleware(apiKey, handleExportJSON))     // JSON export
+	http.HandleFunc("/", serveWeb)                                                // Web dashboard (public)
+	http.HandleFunc("/health", handleHealth)                                      // Health check (public)
+	http.HandleFunc("/api/stats", handleStats)                                    // Statistics (public)
+	http.HandleFunc("/api/logs", authMiddleware(apiKey, handleLogs))              // Log CRUD operations
+	http.HandleFunc("/api/export/csv", authMiddleware(apiKey, handleExportCSV))   // CSV export
+	http.HandleFunc("/api/export/json", authMiddleware(apiKey, handleExportJSON)) // JSON export
 }
 
 // =============================================================================
@@ -604,7 +604,7 @@ func isValidTailwindColor(color string) bool {
 	validColors := map[string]bool{
 		// Neutral colors
 		"slate": true, "gray": true, "zinc": true, "neutral": true, "stone": true,
-		// Warm colors  
+		// Warm colors
 		"red": true, "orange": true, "amber": true, "yellow": true, "lime": true,
 		// Cool colors
 		"green": true, "emerald": true, "teal": true, "cyan": true, "sky": true, "blue": true,
@@ -615,14 +615,14 @@ func isValidTailwindColor(color string) bool {
 }
 
 // deriveMetadata uses smart pattern matching to analyze incoming logs and derive useful metadata
-// 
+//
 // PHILOSOPHY: "Adaptable by design, intelligent by nature"
 // This function automatically extracts meaningful insights from unstructured log data
 // without forcing users to conform to specific schemas or formats.
 //
 // SMART ANALYSIS INCLUDES:
 // 1. Severity Detection: Analyzes text patterns to determine error/warning/success/info/debug
-// 2. Source Extraction: Looks for service identifiers in body.service, body.source, or header.source  
+// 2. Source Extraction: Looks for service identifiers in body.service, body.source, or header.source
 // 3. Category Classification: Derives categories from log types or title keywords
 //
 // PATTERN MATCHING STRATEGY:
@@ -698,7 +698,7 @@ func deriveSourceFromBody(body map[string]interface{}) string {
 			return value
 		}
 	}
-	
+
 	// Check nested common patterns
 	if meta, ok := body["metadata"].(map[string]interface{}); ok {
 		for _, field := range sourceFields {
@@ -707,7 +707,7 @@ func deriveSourceFromBody(body map[string]interface{}) string {
 			}
 		}
 	}
-	
+
 	return "unknown" // clear default when no source found
 }
 
@@ -932,12 +932,12 @@ func validateLogHeader(header *LogHeader) error {
 	if header.Title == "" {
 		return fmt.Errorf("title is required")
 	}
-	
+
 	// If color provided, validate it
 	if header.Color != "" && !isValidTailwindColor(header.Color) {
 		return fmt.Errorf("invalid color '%s' - must be a valid Tailwind CSS 4 color name", header.Color)
 	}
-	
+
 	return nil
 }
 
@@ -988,17 +988,17 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	// =============================================================================
 	// SMART DEFAULTS SECTION - v1.1.0 FLEXIBILITY
 	// =============================================================================
-	
+
 	// Auto-derive type if missing
 	if entry.Header.Type == "" {
 		entry.Header.Type = deriveTypeFromContent(entry.Header, entry.Body)
 	}
-	
-	// Auto-derive source if missing  
+
+	// Auto-derive source if missing
 	if entry.Header.Source == "" {
 		entry.Header.Source = deriveSourceFromBody(entry.Body)
 	}
-	
+
 	// Auto-assign color based on detected severity if missing
 	if entry.Header.Color == "" {
 		entry.Header.Color = deriveColorFromSeverity(entry.Header, entry.Body)
@@ -1018,14 +1018,14 @@ func createLog(w http.ResponseWriter, r *http.Request) {
 	result, err := db.Exec(`
 		INSERT INTO logs (type, title, description, source, color, body, derived_severity, derived_source, derived_category) 
 		VALUES (?, ?, NULLIF(?, ''), NULLIF(?, ''), ?, ?, ?, ?, ?)`,
-		entry.Header.Type, 
-		entry.Header.Title, 
+		entry.Header.Type,
+		entry.Header.Title,
 		entry.Header.Description, // Will be NULL if empty
-		entry.Header.Source,       // Will be NULL if empty
-		entry.Header.Color, 
+		entry.Header.Source,      // Will be NULL if empty
+		entry.Header.Color,
 		string(bodyJSON),
-		metadata.DerivedSeverity, 
-		metadata.DerivedSource, 
+		metadata.DerivedSeverity,
+		metadata.DerivedSource,
 		metadata.DerivedCategory)
 
 	if err != nil {
@@ -1166,7 +1166,7 @@ func handleHealth(w http.ResponseWriter, r *http.Request) {
 //
 // SMART ANALYTICS FEATURES:
 // - Real-time error rate calculation and trending
-// - Severity breakdown using AI-derived classifications  
+// - Severity breakdown using AI-derived classifications
 // - Top log sources extracted from multiple data sources
 // - Hourly distribution analysis for pattern detection
 // - Smart alerting system for anomaly detection
@@ -1207,7 +1207,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 
 	// Basic counts
 	db.QueryRow("SELECT COUNT(*) FROM logs").Scan(&stats.Total)
-	
+
 	// Logs in last 24 hours
 	last24h := time.Now().AddDate(0, 0, -1)
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE timestamp >= ?", last24h).Scan(&stats.Last24Hours)
@@ -1238,7 +1238,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%.java:%' OR body LIKE '%.py:%' OR body LIKE '%goroutine%' OR body LIKE '%Traceback%'").Scan(&stackTraces)
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%unauthorized%' OR body LIKE '%forbidden%' OR body LIKE '%breach%' OR body LIKE '%vulnerability%'").Scan(&securityIssues)
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%ms%' OR body LIKE '%slow%' OR body LIKE '%timeout%' OR body LIKE '%performance%'").Scan(&performanceIssues)
-	
+
 	// Assign to map
 	stats.PatternStats["http_codes_detected"] = httpCodes
 	stats.PatternStats["stack_traces_found"] = stackTraces
@@ -1283,7 +1283,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	if stats.Last24Hours > 0 {
 		errorRate := float64(errorCount24h) / float64(stats.Last24Hours) * 100
 		stats.ErrorRate24h = fmt.Sprintf("%.1f%%", errorRate)
-		
+
 		// Generate alert if error rate is high
 		if errorRate > 20 {
 			stats.Alerts = append(stats.Alerts, fmt.Sprintf("High error rate detected: %.1f%%", errorRate))
@@ -1328,7 +1328,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 	var errorCountPrev24h int
 	prev48h := time.Now().AddDate(0, 0, -2)
 	db.QueryRow("SELECT COUNT(*) FROM logs WHERE derived_severity = 'error' AND timestamp >= ? AND timestamp < ?", prev48h, last24h).Scan(&errorCountPrev24h)
-	
+
 	stats.Trends["errors_increasing"] = errorCount24h > errorCountPrev24h
 	stats.Trends["error_change"] = errorCount24h - errorCountPrev24h
 
@@ -1343,7 +1343,7 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		}
 		avgHourlyCount = total / 24
 	}
-	
+
 	if currentHourCount > avgHourlyCount*2 && avgHourlyCount > 0 {
 		stats.Trends["spike_detected"] = true
 		stats.Alerts = append(stats.Alerts, "Unusual spike in logs detected in the current hour")
@@ -1552,13 +1552,13 @@ func getEnvInt(key string, defaultValue int) int {
 // writePIDFile writes the current process ID to a file
 func writePIDFile(pidFile string) error {
 	pid := fmt.Sprintf("%d", os.Getpid())
-	
+
 	// Create directory if it doesn't exist
 	dir := filepath.Dir(pidFile)
 	if err := os.MkdirAll(dir, 0755); err != nil {
 		return fmt.Errorf("failed to create PID directory: %v", err)
 	}
-	
+
 	return os.WriteFile(pidFile, []byte(pid), 0644)
 }
 
@@ -1576,12 +1576,12 @@ func readPIDFile(pidFile string) (int, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	pid, err := strconv.Atoi(string(data))
 	if err != nil {
 		return 0, fmt.Errorf("invalid PID in file: %v", err)
 	}
-	
+
 	return pid, nil
 }
 
@@ -1591,7 +1591,7 @@ func isProcessRunning(pid int) bool {
 	if err != nil {
 		return false
 	}
-	
+
 	// On Unix systems, sending signal 0 checks if process exists
 	err = process.Signal(syscall.Signal(0))
 	return err == nil
@@ -1604,7 +1604,7 @@ func handleStatus(pidFile string) {
 		fmt.Printf("❌ CubicLog is not running (no PID file found)\n")
 		os.Exit(1)
 	}
-	
+
 	if isProcessRunning(pid) {
 		fmt.Printf("✅ CubicLog is running (PID: %d)\n", pid)
 		os.Exit(0)
@@ -1623,27 +1623,27 @@ func handleStop(pidFile string) {
 		fmt.Printf("❌ CubicLog is not running (no PID file found)\n")
 		os.Exit(1)
 	}
-	
+
 	if !isProcessRunning(pid) {
 		fmt.Printf("❌ CubicLog is not running (stale PID file found)\n")
 		removePIDFile(pidFile)
 		os.Exit(1)
 	}
-	
+
 	// Send SIGTERM for graceful shutdown
 	process, err := os.FindProcess(pid)
 	if err != nil {
 		fmt.Printf("❌ Failed to find process %d: %v\n", pid, err)
 		os.Exit(1)
 	}
-	
+
 	fmt.Printf("🛑 Stopping CubicLog (PID: %d)...\n", pid)
-	
+
 	if err := process.Signal(syscall.SIGTERM); err != nil {
 		fmt.Printf("❌ Failed to stop CubicLog: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Wait for process to stop (up to 30 seconds)
 	for i := 0; i < 30; i++ {
 		if !isProcessRunning(pid) {
@@ -1652,14 +1652,14 @@ func handleStop(pidFile string) {
 		}
 		time.Sleep(1 * time.Second)
 	}
-	
+
 	// Force kill if still running
 	fmt.Printf("⚠️  Process didn't stop gracefully, forcing shutdown...\n")
 	if err := process.Signal(syscall.SIGKILL); err != nil {
 		fmt.Printf("❌ Failed to force stop CubicLog: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	fmt.Printf("✅ CubicLog force stopped\n")
 }
 
@@ -1671,7 +1671,7 @@ func handleRestart(pidFile string, args []string) {
 		handleStop(pidFile)
 		time.Sleep(2 * time.Second) // Give it time to fully stop
 	}
-	
+
 	// Filter out the restart flag for the new process
 	newArgs := make([]string, 0, len(args))
 	for _, arg := range args {
@@ -1679,16 +1679,16 @@ func handleRestart(pidFile string, args []string) {
 			newArgs = append(newArgs, arg)
 		}
 	}
-	
+
 	fmt.Printf("🚀 Starting CubicLog...\n")
-	
+
 	// Start new process
 	execPath, err := os.Executable()
 	if err != nil {
 		fmt.Printf("❌ Failed to get executable path: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Start new process in background
 	process, err := os.StartProcess(execPath, newArgs, &os.ProcAttr{
 		Files: []*os.File{nil, os.Stdout, os.Stderr},
@@ -1697,12 +1697,12 @@ func handleRestart(pidFile string, args []string) {
 		fmt.Printf("❌ Failed to start CubicLog: %v\n", err)
 		os.Exit(1)
 	}
-	
+
 	// Don't wait for the process, let it run independently
 	process.Release()
-	
+
 	time.Sleep(2 * time.Second) // Give it time to start
-	
+
 	// Check if it's running
 	if newPid, err := readPIDFile(pidFile); err == nil && isProcessRunning(newPid) {
 		fmt.Printf("✅ CubicLog restarted successfully (PID: %d)\n", newPid)
