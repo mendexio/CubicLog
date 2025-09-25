@@ -1232,11 +1232,18 @@ func handleStats(w http.ResponseWriter, r *http.Request) {
 		"performance_issues":  0,
 	}
 
-	// Query for pattern statistics
-	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%status%' OR body LIKE '%HTTP%' OR body LIKE '%code%'").Scan(&stats.PatternStats["http_codes_detected"])
-	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%.java:%' OR body LIKE '%.py:%' OR body LIKE '%goroutine%' OR body LIKE '%Traceback%'").Scan(&stats.PatternStats["stack_traces_found"])
-	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%unauthorized%' OR body LIKE '%forbidden%' OR body LIKE '%breach%' OR body LIKE '%vulnerability%'").Scan(&stats.PatternStats["security_issues"])
-	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%ms%' OR body LIKE '%slow%' OR body LIKE '%timeout%' OR body LIKE '%performance%'").Scan(&stats.PatternStats["performance_issues"])
+	// Query for pattern statistics using temporary variables
+	var httpCodes, stackTraces, securityIssues, performanceIssues int
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%status%' OR body LIKE '%HTTP%' OR body LIKE '%code%'").Scan(&httpCodes)
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%.java:%' OR body LIKE '%.py:%' OR body LIKE '%goroutine%' OR body LIKE '%Traceback%'").Scan(&stackTraces)
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%unauthorized%' OR body LIKE '%forbidden%' OR body LIKE '%breach%' OR body LIKE '%vulnerability%'").Scan(&securityIssues)
+	db.QueryRow("SELECT COUNT(*) FROM logs WHERE body LIKE '%ms%' OR body LIKE '%slow%' OR body LIKE '%timeout%' OR body LIKE '%performance%'").Scan(&performanceIssues)
+	
+	// Assign to map
+	stats.PatternStats["http_codes_detected"] = httpCodes
+	stats.PatternStats["stack_traces_found"] = stackTraces
+	stats.PatternStats["security_issues"] = securityIssues
+	stats.PatternStats["performance_issues"] = performanceIssues
 
 	// Calculate detection accuracy (percentage of logs with smart categorization)
 	var smartCategorized int
