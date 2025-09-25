@@ -420,6 +420,9 @@ const webUI = `<!DOCTYPE html>
                 </div>
             </div>
 
+            <!-- Spacing between Smart Pattern Analytics and Log Distribution -->
+            <div class="mb-6"></div>
+
             <!-- Collapsible Log Distribution Card -->
             <div class="bg-card border border-border rounded-lg">
                 <div class="px-6 py-4 border-b border-border">
@@ -569,21 +572,23 @@ const webUI = `<!DOCTYPE html>
         </div>
 
         <!-- Pagination -->
-        <div x-show="!loading && totalPages > 1" class="flex items-center justify-between">
+        <div x-show="!loading && totalLogs > 0" class="flex items-center justify-between">
             <p class="text-sm text-muted-foreground">
                 Showing <span class="font-medium" x-text="((currentPage - 1) * logsPerPage + 1)"></span> to
                 <span class="font-medium" x-text="Math.min(currentPage * logsPerPage, totalLogs)"></span> of
                 <span class="font-medium" x-text="totalLogs"></span> results
             </p>
             <div class="flex items-center space-x-2">
-                <button @click="previousPage()"
+                <!-- Previous button - only show when multiple pages -->
+                <button x-show="totalPages > 1" 
+                        @click="previousPage()"
                         :disabled="currentPage <= 1"
                         class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
                     <i class="fas fa-chevron-left mr-1"></i>
                     Previous
                 </button>
                 
-                <!-- Logs per page dropdown -->
+                <!-- Logs per page dropdown - always show when there are logs -->
                 <div class="flex items-center space-x-2">
                     <span class="text-sm text-muted-foreground">Show:</span>
                     <select x-model="logsPerPage" 
@@ -593,9 +598,12 @@ const webUI = `<!DOCTYPE html>
                         <option value="25">25</option>
                         <option value="50">50</option>
                     </select>
+                    <span class="text-sm text-muted-foreground">per page</span>
                 </div>
                 
-                <button @click="nextPage()"
+                <!-- Next button - only show when multiple pages -->
+                <button x-show="totalPages > 1"
+                        @click="nextPage()"
                         :disabled="currentPage >= totalPages"
                         class="px-3 py-2 text-sm border border-border rounded-lg hover:bg-accent disabled:opacity-50 disabled:cursor-not-allowed">
                     Next
