@@ -1,6 +1,6 @@
-# CubicLog Usage Guide
+# CubicLog Quick Start Guide
 
-A quick, practical guide to using CubicLog effectively.
+Get up and running with CubicLog in minutes. This practical guide shows you exactly how to use CubicLog effectively.
 
 ## Quick Setup
 
@@ -449,4 +449,9 @@ curl -X POST http://localhost:8080/api/logs \
 
 ---
 
-That's it! You're now ready to use CubicLog effectively. Check the [full README](README.md) for advanced features and deployment options.
+That's it! You're now ready to use CubicLog effectively. 
+
+**Next Steps:**
+- 📖 [Full Documentation](README.md) - Comprehensive features and deployment guide
+- 🌐 [GitHub Pages](https://mendexio.github.io/CubicLog/) - Interactive documentation and examples
+- 🐛 [Issues & Support](https://github.com/mendexio/CubicLog/issues) - Get help or report problems
